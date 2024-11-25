@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>Blockly Sample App</title>
+    <link rel="stylesheet" href="./src/reset.css"/>
     <link rel="stylesheet" href="./src/style.css"/>
     <link rel="stylesheet" href="./src/split.css"/>
   </head>
@@ -11,8 +12,9 @@
       <section id="sidebar">
       </section>
       <section id="workspace">
-        <div id="blocklyArea"></div>
-        <pre id="generatedCode"><code></code></pre>
+        <label id="showGeneratedCode"><input type="checkbox"/>Show Generated Code</label>
+        <button class="spacer">&nbsp;</button>
+        <div id="blocklyArea"><pre><code id="generatedCode"></code></pre></div>
       </section>
     </main>
     <div id="blocklyDiv"></div>

@@ -2,9 +2,14 @@ import * as Blockly from 'blockly';
 
 import Split from 'split.js';
 
-export const codeDiv = document.getElementById('generatedCode')?.firstChild!;
+// TODO migrate to React
+
+const showGeneratedCodeInput = document.querySelector('#showGeneratedCode input') as HTMLInputElement;
+export const codeDiv = document.getElementById('generatedCode')!;
 export const blocklyDiv = document.getElementById('blocklyDiv')!;
 export const blocklyArea = document.getElementById('blocklyArea')!;
+
+const gutterSize = 8;
 
 const handleWindowResize = function(ws: Blockly.WorkspaceSvg) {
   // Compute the absolute coordinates and dimensions of blocklyArea.
@@ -30,15 +35,21 @@ export const setupLayout = (ws: Blockly.WorkspaceSvg) => {
 
   setTimeout(_handleWindowResize);
 
-  Split(['#sidebar', '#workspace'], {
-    onDrag: _handleWindowResize,
-    gutterSize: 8,
+  setTimeout(() => {
+    showGeneratedCodeInput.addEventListener('change', () => {
+      const {style} = blocklyDiv;
+      if(showGeneratedCodeInput.checked) {
+        style.display = 'none';
+        ws.render();
+      } else {
+        style.display = 'block';
+      }
+    })
   });
 
-  Split(['#blocklyArea', '#generatedCode'], {
-    gutterSize: 8,
-    direction: 'vertical',
+  Split(['#sidebar', '#workspace'], {
     onDrag: _handleWindowResize,
+    gutterSize,
   });
 }
 
