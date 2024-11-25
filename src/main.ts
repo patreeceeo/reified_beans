@@ -27,12 +27,21 @@ const ws = Blockly.inject(blocklyDiv, {toolbox});
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
 const runCode = () => {
-  const code = javascriptGenerator.workspaceToCode(ws as Blockly.Workspace);
+  let code = javascriptGenerator.workspaceToCode(ws as Blockly.Workspace);
   if (codeDiv) codeDiv.textContent = code;
 
   if (outputDiv) outputDiv.innerHTML = '';
 
+  // Idea: Use javascriptGenerator.STATEMENT_SUFFIX to capture the state of variables at each line
+  const scope = {};
+
+  for(const v of ws.getAllVariables()) {
+    code += `;scope['${v.name}'] = ${v.name}`
+  }
+
   eval(code);
+
+  console.log(scope);
 };
 
 if (ws) {
@@ -64,41 +73,3 @@ if (ws) {
   });
 }
 
-
-// const elInput = document.getElementById('input')! as HTMLTextAreaElement;
-// const elOutput = document.getElementById('output')! as HTMLTextAreaElement;
-
-// // Regular expression to match JavaScript variable assignments
-// const re = /(\w+)\s*=\s*.*/g;
-
-// let lastLineCount = 0;
-
-// elInput.addEventListener('input', () => {
-//   const text = elInput.value;
-//   // console.log(text);
-
-//   const lines = text.split('\n');
-
-//   // If the number of lines has not changed, do not recompute the output
-//   if (lines.length === lastLineCount) {
-//     return;
-//   }
-
-//   // Output will show the value of each variable
-//   let output = "";
-
-//   // For each variable assignment in the line, create a script string to get the assigned values via eval
-//   for (const line of lines) {
-//     let match;
-//     // Match all variable assignments and get the variable names
-//     while ((match = re.exec(line)) !== null) {
-//       const variable = match[1];
-//       const value = eval(`${line}; ${variable}`);
-//       output += `${variable}: ${value},`;
-//     }
-//     output += "\n";
-//   }
-
-//   elOutput.value = output;
-//   lastLineCount = lines.length;
-// });
