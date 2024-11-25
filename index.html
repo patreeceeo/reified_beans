@@ -4,14 +4,17 @@
     <meta charset="utf-8" />
     <title>Blockly Sample App</title>
     <link rel="stylesheet" href="./src/style.css"/>
+    <link rel="stylesheet" href="./src/split.css"/>
   </head>
   <body>
-    <div id="pageContainer">
-      <div id="outputPane">
+    <div id="pageContainer" class="split">
+      <details id="sidebar">
+        <summary>Generated Code</summary>
         <pre id="generatedCode"><code></code></pre>
-      </div>
-      <div id="blocklyDiv"></div>
+      </details>
+      <div id="blocklyArea"></div>
     </div>
+    <div id="blocklyDiv"></div>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

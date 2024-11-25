@@ -8,26 +8,22 @@ import {forBlock} from './generators/javascript';
 import {javascriptGenerator} from 'blockly/javascript';
 import {save, load} from './serialization';
 import {toolbox} from './toolbox';
+import {blocklyDiv, codeDiv, setupLayout} from "./layout";
+
+const ws = Blockly.inject(blocklyDiv, {toolbox});
+
+setupLayout(ws);
 
 // Register the blocks and generator with Blockly
 Blockly.common.defineBlocks(blocks);
 Object.assign(javascriptGenerator.forBlock, forBlock);
-
-// Set up UI elements and inject Blockly
-const codeDiv = document.getElementById('generatedCode')?.firstChild;
-const blocklyDiv = document.getElementById('blocklyDiv');
-
-if (!blocklyDiv) {
-  throw new Error(`div with id 'blocklyDiv' not found`);
-}
-const ws = Blockly.inject(blocklyDiv, {toolbox});
 
 // This function resets the code and output divs, shows the
 // generated code from the workspace, and evals the code.
 // In a real application, you probably shouldn't use `eval`.
 const runCode = () => {
   let code = javascriptGenerator.workspaceToCode(ws as Blockly.Workspace);
-  if (codeDiv) codeDiv.textContent = code;
+  codeDiv.textContent = code;
 
   // Idea: Use javascriptGenerator.STATEMENT_SUFFIX to capture the state of variables at each line
   const scope = {};

@@ -13,6 +13,7 @@
     "vite": "^5.4.10"
   },
   "dependencies": {
-    "blockly": "^11.1.1"
+    "blockly": "^11.1.1",
+    "split.js": "^1.6.5"
   }
 }
