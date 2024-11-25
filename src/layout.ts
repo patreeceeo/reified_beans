@@ -30,9 +30,15 @@ export const setupLayout = (ws: Blockly.WorkspaceSvg) => {
 
   setTimeout(_handleWindowResize);
 
-  Split(['#sidebar', '#blocklyArea'], {
+  Split(['#sidebar', '#workspace'], {
     onDrag: _handleWindowResize,
     gutterSize: 8,
+  });
+
+  Split(['#blocklyArea', '#generatedCode'], {
+    gutterSize: 8,
+    direction: 'vertical',
+    onDrag: _handleWindowResize,
   });
 }
 

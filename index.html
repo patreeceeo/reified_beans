@@ -7,13 +7,14 @@
     <link rel="stylesheet" href="./src/split.css"/>
   </head>
   <body>
-    <div id="pageContainer" class="split">
-      <details id="sidebar">
-        <summary>Generated Code</summary>
+    <main id="pageContainer" class="split">
+      <section id="sidebar">
+      </section>
+      <section id="workspace">
+        <div id="blocklyArea"></div>
         <pre id="generatedCode"><code></code></pre>
-      </details>
-      <div id="blocklyArea"></div>
-    </div>
+      </section>
+    </main>
     <div id="blocklyDiv"></div>
     <script type="module" src="./src/main.ts"></script>
   </body>
