@@ -15,7 +15,6 @@ Object.assign(javascriptGenerator.forBlock, forBlock);
 
 // Set up UI elements and inject Blockly
 const codeDiv = document.getElementById('generatedCode')?.firstChild;
-const outputDiv = document.getElementById('output');
 const blocklyDiv = document.getElementById('blocklyDiv');
 
 if (!blocklyDiv) {
@@ -29,8 +28,6 @@ const ws = Blockly.inject(blocklyDiv, {toolbox});
 const runCode = () => {
   let code = javascriptGenerator.workspaceToCode(ws as Blockly.Workspace);
   if (codeDiv) codeDiv.textContent = code;
-
-  if (outputDiv) outputDiv.innerHTML = '';
 
   // Idea: Use javascriptGenerator.STATEMENT_SUFFIX to capture the state of variables at each line
   const scope = {};
