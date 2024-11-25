@@ -33,3 +33,7 @@ export const setupLayout = (ws: Blockly.WorkspaceSvg) => {
     gutterSize: 8,
   });
 }
+
+export const layoutBlocklyOptions: Partial<Blockly.BlocklyOptions> = {
+  toolboxPosition:  'end'
+}

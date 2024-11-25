@@ -8,9 +8,9 @@ import {forBlock} from './generators/javascript';
 import {javascriptGenerator} from 'blockly/javascript';
 import {save, load} from './serialization';
 import {toolbox} from './toolbox';
-import {blocklyDiv, codeDiv, setupLayout} from "./layout";
+import {blocklyDiv, codeDiv, layoutBlocklyOptions, setupLayout} from "./layout";
 
-const ws = Blockly.inject(blocklyDiv, {toolbox});
+const ws = Blockly.inject(blocklyDiv, {...layoutBlocklyOptions, toolbox});
 
 setupLayout(ws);
 
