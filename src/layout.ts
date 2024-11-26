@@ -2,8 +2,6 @@ import * as Blockly from 'blockly';
 
 import Split from 'split.js';
 
-// TODO migrate to React
-
 const showGeneratedCodeInput = document.querySelector('#showGeneratedCode input') as HTMLInputElement;
 export const codeDiv = document.getElementById('generatedCode')!;
 export const blocklyDiv = document.getElementById('blocklyDiv')!;

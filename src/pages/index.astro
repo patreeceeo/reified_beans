@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout>
+  <main id="pageContainer" class="split">
+    <section id="sidebar">
+    </section>
+    <section id="workspace">
+      <label id="showGeneratedCode"><input type="checkbox"/>Show Generated Code</label>
+      <button class="spacer">&nbsp;</button>
+      <div id="blocklyArea"><pre><code id="generatedCode"></code></pre></div>
+    </section>
+  </main>
+  <div id="blocklyDiv"></div>
+</Layout>
+<script>
+  import '../main';
+</script>
