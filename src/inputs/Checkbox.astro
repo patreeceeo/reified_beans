@@ -1,0 +1,25 @@
+---
+interface Props {
+  'onchange': string;
+}
+const { onchange }: Props = Astro.props;
+---
+<my-checkbox data-onchange={onchange}>
+  <label><input type="checkbox"/><slot/></label>
+</my-checkbox>
+<script>
+  class MyCheckbox extends HTMLElement {
+    connectedCallback() {
+      const {onchange} = this.dataset;
+      if(onchange) {
+        const inputEl = this.querySelector("input")!;
+        inputEl.addEventListener("change", () => {
+          const eventTargetEl = this.closest('[event-target]')
+          eventTargetEl!.dispatchEvent(new CustomEvent(onchange, {detail: {checked: inputEl.checked}}));
+        });
+      }
+    }
+  }
+
+  customElements.define("my-checkbox", MyCheckbox);
+</script>

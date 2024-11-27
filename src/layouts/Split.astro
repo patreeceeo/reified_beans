@@ -1,0 +1,31 @@
+---
+import '../split.css';
+interface Props {
+  gutterSize: number;
+  onDrag: string;
+  [key: string]: any;
+}
+const { gutterSize, onDrag, ...rest } = Astro.props;
+---
+<split-layout data-guttersize={gutterSize} data-ondrag={onDrag} {...rest} class="split">
+  <slot name="1"></slot>
+  <slot name="2"></slot>
+</split-layout>
+<script>
+  import Split from 'split.js';
+
+  class SplitLayout extends HTMLElement {
+    connectedCallback() {
+      const onDrag = () => {
+        const eventTargetEl = this.closest('[event-target]');
+        eventTargetEl!.dispatchEvent(new CustomEvent(this.dataset.ondrag!));
+      }
+      Split([this.children[0] as HTMLElement, this.children[1] as HTMLElement], {
+        gutterSize: parseInt(this.dataset.guttersize!),
+        onDrag,
+      });
+    }
+  }
+
+  customElements.define("split-layout", SplitLayout);
+</script>
