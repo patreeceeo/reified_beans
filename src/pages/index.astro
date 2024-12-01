@@ -30,6 +30,7 @@ import Split from '../layouts/Split.astro';
   import type {SplitLayout} from '../layouts/Split';
   import {False, True, BooleanObject} from '../BooleanObject';
   import {AnimationFrameObservable} from '../observables';
+  import {returning} from '../functions';
 
   const codeDiv = document.getElementById('generatedCode')!;
   const blocklyDiv = document.getElementById('blocklyDiv')!;
@@ -118,11 +119,13 @@ import Split from '../layouts/Split.astro';
     windowWasResized = True;
   });
 
+  const returnFalse = returning(False);
+
   animationFrame.subscribe(() => {
     const {checked} = toggle;
     blocklyDiv.style.display = checked.if(() => 'none', () => 'block');
-    split.changed = split.changed.if(resizeBlocklyWorkspace, () => False);
-    windowWasResized = windowWasResized.if(resizeBlocklyWorkspace, () => False);
+    split.changed = split.changed.if(resizeBlocklyWorkspace, returnFalse);
+    windowWasResized = windowWasResized.if(resizeBlocklyWorkspace, returnFalse);
   });
   animationFrame.start();
 </script>
