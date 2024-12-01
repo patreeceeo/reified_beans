@@ -26,3 +26,18 @@ export class AnimationFrameStream extends Stream<number> {
     cancelAnimationFrame(this.animationFrame!);
   }
 }
+
+export class OffsetParentElementStream extends Stream<HTMLElement> {
+  constructor(readonly startingElement: HTMLElement) {
+    super();
+  }
+  start() {
+    this.next(this.startingElement);
+  }
+  next(element: HTMLElement) {
+    super.next(element);
+    if(element.offsetParent) {
+      this.next(element.offsetParent as HTMLElement);
+    }
+  }
+}

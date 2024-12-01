@@ -1,0 +1,21 @@
+---
+
+---
+<blockly-workspace class="area">
+  <div class="injectTarget"></div>
+</blockly-workspace>
+<style>
+  .area {
+    height: 100%;
+    width: 100%;
+    display: block;
+  }
+
+  .injectTarget {
+    position: absolute;
+  }
+</style>
+<script>
+  import { BlocklyWorkspace } from './BlocklyWorkspace';
+  customElements.define('blockly-workspace', BlocklyWorkspace);
+</script>

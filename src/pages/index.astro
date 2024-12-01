@@ -1,118 +1,51 @@
 ---
+import BlocklyWorkspace from '../components/BlocklyWorkspace.astro';
 import Layout from '../layouts/Layout.astro';
 import Split from '../layouts/Split.astro';
 ---
 <Layout>
   <Split id="pageContainer">
-    <section id="sidebar" slot="1">
+    <section slot="1">
       Hello
     </section>
-    <section id="workspace" slot="2">
+    <section slot="2">
       <label><input id="toggleGeneratedCode" type="checkbox"/>Show Generated Code</label>
       <button class="spacer">&nbsp;</button>
-      <div id="blocklyArea"><pre><code id="generatedCode"></code></pre></div>
+      <BlocklyWorkspace/>
+      <pre id="generated"><code></code></pre>
     </section>
   </Split>
-  <div id="blocklyDiv"></div>
 </Layout>
+<style>
+  #generated {
+    position: absolute;
+    z-index: 1;
+    background-color: rgb(247, 240, 228);
+  }
+
+  #pageContainer {
+    height: 100vh;
+  }
+
+  .spacer {
+    opacity: 0;
+  }
+</style>
 <script>
-  // Need to use JS interpreter to be able to remember the state of the variables
-  // But if ultimately using Blockly, I don't need to parse the code to know when an assignment has happened.
-  // While we're on that topic, it seems inefficient to have Blocly generate JS code only to parse it again.
-  // I wonder if I can modify Blockly and the JS interpreter to communicate directly via syntax tree...
-  import * as Blockly from 'blockly';
-  import {blocks} from '../blocks/text';
-  import {forBlock} from '../generators/javascript';
-  import {javascriptGenerator} from 'blockly/javascript';
-  import {save, load} from '../serialization';
-  import {toolbox} from '../toolbox';
   import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
   import {False, True, BooleanObject} from '../BooleanObject';
   import {AnimationFrameStream} from '../streams';
   import {returning} from '../functions';
+  import {copyOffsetParentTransform} from '../htmlElement';
+  import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
 
-  const codeDiv = document.getElementById('generatedCode')!;
-  const blocklyDiv = document.getElementById('blocklyDiv')!;
-  const blocklyArea = document.getElementById('blocklyArea')!;
-
-  const ws = Blockly.inject(blocklyDiv, {toolboxPosition: 'end', toolbox});
-
-  const resizeBlocklyWorkspace = () => {
-    // Compute the absolute coordinates and dimensions of blocklyArea.
-    let element = blocklyArea;
-    let x = 0;
-    let y = 0;
-    do {
-      x += element.offsetLeft;
-      y += element.offsetTop;
-      element = element.offsetParent as HTMLElement;
-    } while (element);
-    // Position blocklyDiv over blocklyArea.
-    blocklyDiv.style.left = x + 'px';
-    blocklyDiv.style.top = y + 'px';
-    blocklyDiv.style.width = blocklyArea.offsetWidth + 'px';
-    blocklyDiv.style.height = blocklyArea.offsetHeight + 'px';
-    // TODO(perf): this is expensive.
-    Blockly.svgResize(ws);
-
-    return False;
-  };
-
-
-  // Register the blocks and generator with Blockly
-  Blockly.common.defineBlocks(blocks);
-  Object.assign(javascriptGenerator.forBlock, forBlock);
-
-  // This function resets the code and output divs, shows the
-  // generated code from the workspace, and evals the code.
-  // In a real application, you probably shouldn't use `eval`.
-  const runCode = () => {
-    let code = javascriptGenerator.workspaceToCode(ws as Blockly.Workspace);
-    codeDiv.textContent = code;
-
-    // Idea: Use javascriptGenerator.STATEMENT_SUFFIX to capture the state of variables at each line
-    const scope = {};
-
-    for(const v of ws.getAllVariables()) {
-      code += `;scope['${v.name}'] = ${v.name}`
-    }
-
-    eval(code);
-
-    console.log(scope);
-  };
-
-  // Load the initial state from storage and run the code.
-  load(ws);
-  runCode();
-
-  // Every time the workspace changes state, save the changes to storage.
-  ws.addChangeListener((e: Blockly.Events.Abstract) => {
-    // UI events are things like scrolling, zooming, etc.
-    // No need to save after one of these.
-    if (e.isUiEvent) return;
-    save(ws);
-  });
-
-  // Whenever the workspace changes meaningfully, run the code again.
-  ws.addChangeListener((e: Blockly.Events.Abstract) => {
-    // Don't run the code when the workspace finishes loading; we're
-    // already running it once when the application starts.
-    // Don't run the code during drags; we might have invalid state.
-    if (
-      e.isUiEvent ||
-      e.type == Blockly.Events.FINISHED_LOADING ||
-      ws.isDragging()
-    ) {
-      return;
-    }
-    runCode();
-  });
-
+  const blocklyWorkspace = document.querySelector('blockly-workspace') as BlocklyWorkspace;
   const toggle = new Checkbox('#toggleGeneratedCode');
   const split = document.getElementById('pageContainer') as SplitLayout;
   const animationFrame = new AnimationFrameStream(20);
+  const generatedElement = document.getElementById('generated')!;
+  const generatedCode = generatedElement.querySelector('code')!;
   let windowWasResized: BooleanObject = True;
 
   window.addEventListener('resize', () => {
@@ -123,9 +56,36 @@ import Split from '../layouts/Split.astro';
 
   animationFrame.subscribe(() => {
     const {checked} = toggle;
-    blocklyDiv.style.display = checked.if(() => 'none', () => 'block');
-    split.changed = split.changed.if(resizeBlocklyWorkspace, returnFalse);
-    windowWasResized = windowWasResized.if(resizeBlocklyWorkspace, returnFalse);
+    generatedElement.style.display = checked.if(() => 'block', () => 'none');
+    split.changed = split.changed.if(resizeWorkspace, returnFalse);
+    windowWasResized = windowWasResized.if(resizeWorkspace, returnFalse);
+    blocklyWorkspace.hasMeaningfulChanges = blocklyWorkspace.hasMeaningfulChanges.if(useGeneratedCode, returnFalse);
   });
-  animationFrame.start();
+  setTimeout(() => animationFrame.start(), 100);
+
+
+  function resizeWorkspace() {
+    copyOffsetParentTransform(blocklyWorkspace, generatedElement);
+    blocklyWorkspace.adjustSize();
+    return False;
+  };
+
+  function useGeneratedCode() {
+    // Need to use JS interpreter to be able to remember the state of the variables
+    // But if ultimately using Blockly, I don't need to parse the code to know when an assignment has happened.
+    // While we're on that topic, it seems inefficient to have Blocly generate JS code only to parse it again.
+    // I wonder if I can modify Blockly and the JS interpreter to communicate directly via syntax tree...
+
+    /* Idea: Use javascriptGenerator.STATEMENT_SUFFIX to capture the state of variables at each line
+    const scope = {};
+
+    for(const v of ws.getAllVariables()) {
+      code += `;scope['${v.name}'] = ${v.name}`
+    }
+
+    eval(code);
+     */
+    generatedCode.textContent = blocklyWorkspace.generateCode();
+    return False;
+  }
 </script>
