@@ -1,6 +1,6 @@
-import {Observable} from "./Observable";
+import {Stream} from "./Stream";
 
-export class AnimationFrameObservable extends Observable<number> {
+export class AnimationFrameObservable extends Stream<number> {
   targetDelta: number;
   lastUpdate = 0;
   averageDelta = 0;

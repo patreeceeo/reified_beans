@@ -1,12 +1,12 @@
-export type Observer<T> = (value: T) => void;
+export type StreamObserver<T> = (value: T) => void;
 
 export interface IResourceHandle {
   release(): void;
 }
 
-export class Observable<T> {
-  private observers: Set<Observer<T>> = new Set();
-  subscribe(observer: Observer<T>): IResourceHandle {
+export class Stream<T> {
+  private observers: Set<StreamObserver<T>> = new Set();
+  subscribe(observer: StreamObserver<T>): IResourceHandle {
     this.observers.add(observer);
     return {
       release: () => {
