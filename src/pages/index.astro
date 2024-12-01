@@ -1,5 +1,4 @@
 ---
-import Checkbox from '../inputs/Checkbox.astro';
 import Layout from '../layouts/Layout.astro';
 import Split from '../layouts/Split.astro';
 ---
@@ -9,9 +8,9 @@ import Split from '../layouts/Split.astro';
       Hello
     </section>
     <section id="workspace" slot="2">
-      <Checkbox onchange="toggleGeneratedCode">Show Generated Code</Checkbox>
-        <button class="spacer">&nbsp;</button>
-        <div id="blocklyArea"><pre><code id="generatedCode"></code></pre></div>
+      <label><input id="toggleGeneratedCode" type="checkbox"/>Show Generated Code</label>
+      <button class="spacer">&nbsp;</button>
+      <div id="blocklyArea"><pre><code id="generatedCode"></code></pre></div>
     </section>
   </Split>
   <div id="blocklyDiv"></div>
@@ -28,6 +27,7 @@ import Split from '../layouts/Split.astro';
   import {save, load} from '../serialization';
   import {toolbox} from '../toolbox';
   import {createDocumentEventTarget} from '../events/EventTarget';
+  import { Checkbox } from '../inputs/Checkbox.ts';
 
   const eventTarget = createDocumentEventTarget(document.querySelector('#pageContainer')!)
   const codeDiv = document.getElementById('generatedCode')!;
@@ -60,15 +60,6 @@ import Split from '../layouts/Split.astro';
   setTimeout(_handleWindowResize);
 
   eventTarget
-    .on<CustomEvent<{checked: boolean}>>('toggleGeneratedCode', (e) => {
-      const {style} = blocklyDiv;
-      if(e.detail.checked) {
-        style.display = 'none';
-        ws.render();
-      } else {
-        style.display = 'block';
-      }
-    })
     .on('dragSplit', () => {
       handleWindowResize(ws);
     });
@@ -122,5 +113,17 @@ import Split from '../layouts/Split.astro';
     }
     runCode();
   });
+
+
+
+  requestAnimationFrame(update);
+
+  const toggle = new Checkbox('#toggleGeneratedCode');
+  function update() {
+    const {checked} = toggle;
+    blocklyDiv.style.display = checked.if(() => 'none', () => 'block');
+    requestAnimationFrame(update);
+  }
+
 
 </script>
