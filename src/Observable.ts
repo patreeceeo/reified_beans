@@ -19,7 +19,7 @@ export class Observable<T> {
       observer(value);
     }
   }
-  release() {
+  stop() {
     this.observers.clear();
   }
 }

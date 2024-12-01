@@ -8,6 +8,8 @@ export class AnimationFrameObservable extends Observable<number> {
   constructor(targetFPS: number) {
     super();
     this.targetDelta = 1000 / targetFPS;
+  }
+  start() {
     this.update(0);
   }
   private update = (time: number) => {
@@ -18,8 +20,8 @@ export class AnimationFrameObservable extends Observable<number> {
     this.averageDelta = (this.averageDelta + (time - this.lastUpdate)) / 2;
     this.animationFrame = requestAnimationFrame(this.update);
   }
-  release() {
-    super.release();
+  stop() {
+    super.stop();
     this.lastUpdate = 0;
     cancelAnimationFrame(this.animationFrame);
   }
