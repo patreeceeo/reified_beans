@@ -4,7 +4,7 @@ export class AnimationFrameObservable extends Stream<number> {
   targetDelta: number;
   lastUpdate = 0;
   averageDelta = 0;
-  private animationFrame: number;
+  private animationFrame?: number;
   constructor(targetFPS: number) {
     super();
     this.targetDelta = 1000 / targetFPS;
@@ -23,6 +23,6 @@ export class AnimationFrameObservable extends Stream<number> {
   stop() {
     super.stop();
     this.lastUpdate = 0;
-    cancelAnimationFrame(this.animationFrame);
+    cancelAnimationFrame(this.animationFrame!);
   }
 }

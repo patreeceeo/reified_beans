@@ -19,6 +19,7 @@ export class Stream<T> {
       observer(value);
     }
   }
+  start() {}
   stop() {
     this.observers.clear();
   }
