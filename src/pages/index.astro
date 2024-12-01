@@ -28,7 +28,7 @@ import Split from '../layouts/Split.astro';
   import {toolbox} from '../toolbox';
   import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
-  import {False} from '../BooleanObject';
+  import {False, True, BooleanObject} from '../BooleanObject';
   import {AnimationFrameObservable} from '../observables';
 
   const codeDiv = document.getElementById('generatedCode')!;
@@ -37,7 +37,7 @@ import Split from '../layouts/Split.astro';
 
   const ws = Blockly.inject(blocklyDiv, {toolboxPosition: 'end', toolbox});
 
-  const handleWindowResize = function(ws: Blockly.WorkspaceSvg) {
+  const resizeBlocklyWorkspace = () => {
     // Compute the absolute coordinates and dimensions of blocklyArea.
     let element = blocklyArea;
     let x = 0;
@@ -52,13 +52,12 @@ import Split from '../layouts/Split.astro';
     blocklyDiv.style.top = y + 'px';
     blocklyDiv.style.width = blocklyArea.offsetWidth + 'px';
     blocklyDiv.style.height = blocklyArea.offsetHeight + 'px';
+    // TODO(perf): this is expensive.
     Blockly.svgResize(ws);
+
+    return False;
   };
 
-  const _handleWindowResize = () => handleWindowResize(ws);
-  window.addEventListener('resize', _handleWindowResize, false);
-
-  setTimeout(_handleWindowResize);
 
   // Register the blocks and generator with Blockly
   Blockly.common.defineBlocks(blocks);
@@ -113,13 +112,17 @@ import Split from '../layouts/Split.astro';
   const toggle = new Checkbox('#toggleGeneratedCode');
   const split = document.getElementById('pageContainer') as SplitLayout;
   const animationFrame = new AnimationFrameObservable(20);
+  let windowWasResized: BooleanObject = True;
+
+  window.addEventListener('resize', () => {
+    windowWasResized = True;
+  });
+
   animationFrame.subscribe(() => {
     const {checked} = toggle;
     blocklyDiv.style.display = checked.if(() => 'none', () => 'block');
-    split.changed = split.changed.if(() => {
-      handleWindowResize(ws);
-      return False;
-    }, () => False);
+    split.changed = split.changed.if(resizeBlocklyWorkspace, () => False);
+    windowWasResized = windowWasResized.if(resizeBlocklyWorkspace, () => False);
   });
   animationFrame.start();
 </script>
