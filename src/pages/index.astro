@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Split from '../layouts/Split.astro';
 ---
 <Layout>
-  <Split onDrag="dragSplit" gutterSize={8} id="pageContainer">
+  <Split id="pageContainer">
     <section id="sidebar" slot="1">
       Hello
     </section>
@@ -26,10 +26,11 @@ import Split from '../layouts/Split.astro';
   import {javascriptGenerator} from 'blockly/javascript';
   import {save, load} from '../serialization';
   import {toolbox} from '../toolbox';
-  import {createDocumentEventTarget} from '../events/EventTarget';
   import { Checkbox } from '../inputs/Checkbox.ts';
+  import type {SplitLayout} from '../layouts/Split';
+  import {False} from '../BooleanObject';
+  import {AnimationFrameObservable} from '../observables';
 
-  const eventTarget = createDocumentEventTarget(document.querySelector('#pageContainer')!)
   const codeDiv = document.getElementById('generatedCode')!;
   const blocklyDiv = document.getElementById('blocklyDiv')!;
   const blocklyArea = document.getElementById('blocklyArea')!;
@@ -58,11 +59,6 @@ import Split from '../layouts/Split.astro';
   window.addEventListener('resize', _handleWindowResize, false);
 
   setTimeout(_handleWindowResize);
-
-  eventTarget
-    .on('dragSplit', () => {
-      handleWindowResize(ws);
-    });
 
   // Register the blocks and generator with Blockly
   Blockly.common.defineBlocks(blocks);
@@ -114,16 +110,15 @@ import Split from '../layouts/Split.astro';
     runCode();
   });
 
-
-
-  requestAnimationFrame(update);
-
   const toggle = new Checkbox('#toggleGeneratedCode');
-  function update() {
+  const split = document.getElementById('pageContainer') as SplitLayout;
+  const animationFrame = new AnimationFrameObservable(20);
+  animationFrame.subscribe(() => {
     const {checked} = toggle;
     blocklyDiv.style.display = checked.if(() => 'none', () => 'block');
-    requestAnimationFrame(update);
-  }
-
-
+    split.changed = split.changed.if(() => {
+      handleWindowResize(ws);
+      return False;
+    }, () => False);
+  });
 </script>
