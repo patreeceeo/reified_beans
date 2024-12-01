@@ -1,6 +1,6 @@
 import {Stream} from "./Stream";
 
-export class AnimationFrameObservable extends Stream<number> {
+export class AnimationFrameStream extends Stream<number> {
   targetDelta: number;
   lastUpdate = 0;
   averageDelta = 0;

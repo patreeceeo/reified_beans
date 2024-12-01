@@ -29,7 +29,7 @@ import Split from '../layouts/Split.astro';
   import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
   import {False, True, BooleanObject} from '../BooleanObject';
-  import {AnimationFrameObservable} from '../streams';
+  import {AnimationFrameStream} from '../streams';
   import {returning} from '../functions';
 
   const codeDiv = document.getElementById('generatedCode')!;
@@ -112,7 +112,7 @@ import Split from '../layouts/Split.astro';
 
   const toggle = new Checkbox('#toggleGeneratedCode');
   const split = document.getElementById('pageContainer') as SplitLayout;
-  const animationFrame = new AnimationFrameObservable(20);
+  const animationFrame = new AnimationFrameStream(20);
   let windowWasResized: BooleanObject = True;
 
   window.addEventListener('resize', () => {
