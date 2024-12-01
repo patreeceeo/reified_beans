@@ -54,13 +54,25 @@ import Split from '../layouts/Split.astro';
 
   const returnFalse = returning(False);
 
-  animationFrame.subscribe(() => {
-    const {checked} = toggle;
-    generatedElement.style.display = checked.if(() => 'block', () => 'none');
-    split.changed = split.changed.if(resizeWorkspace, returnFalse);
-    windowWasResized = windowWasResized.if(resizeWorkspace, returnFalse);
-    blocklyWorkspace.hasMeaningfulChanges = blocklyWorkspace.hasMeaningfulChanges.if(useGeneratedCode, returnFalse);
-  });
+  const frameHandlers = [
+    () => {
+      const {checked} = toggle;
+      generatedElement.style.display = checked.if(() => 'block', () => 'none');
+    },
+    () => {
+      split.changed = split.changed.if(resizeWorkspace, returnFalse);
+    },
+    () => {
+      windowWasResized = windowWasResized.if(resizeWorkspace, returnFalse);
+    },
+    () => {
+      blocklyWorkspace.hasMeaningfulChanges = blocklyWorkspace.hasMeaningfulChanges.if(useGeneratedCode, returnFalse);
+    }];
+
+  for(const handler of frameHandlers) {
+    animationFrame.subscribe(handler);
+  }
+
   setTimeout(() => animationFrame.start(), 100);
 
 
