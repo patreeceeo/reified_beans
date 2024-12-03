@@ -1,10 +1,14 @@
 ---
 import '../reset.css';
+interface Props {
+  title: string;
+}
+
 ---
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-    <title>Blockly Sample App</title>
+    <title>{Astro.props.title} - Pieceful</title>
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
 	</head>
