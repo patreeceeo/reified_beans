@@ -1,9 +1,9 @@
 import Split from 'split.js';
-import {BooleanObject, False, True} from '../BooleanObject';
+import {False, True} from '../BooleanObject';
 
 export class SplitLayout extends HTMLElement {
   split?: Split.Instance;
-  changed = False as BooleanObject;
+  changed = False;
   connectedCallback() {
     const options = JSON.parse(this.dataset.options!);
     const config = {

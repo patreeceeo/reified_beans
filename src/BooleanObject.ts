@@ -12,5 +12,5 @@ class FalseClass extends BooleanObject {
   }
 }
 
-export const True = new TrueClass();
-export const False = new FalseClass();
+export const True = new TrueClass() as BooleanObject;
+export const False = new FalseClass() as BooleanObject;

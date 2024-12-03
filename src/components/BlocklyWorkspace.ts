@@ -4,14 +4,14 @@ import {forBlock} from 'src/generators/javascript';
 import {javascriptGenerator} from 'blockly/javascript';
 import {load, save} from 'src/serialization';
 import {toolbox} from 'src/toolbox';
-import {BooleanObject, True} from 'src/BooleanObject';
+import {True} from 'src/BooleanObject';
 import {copyOffsetParentTransform} from '../htmlElement';
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
   private ws?: Blockly.WorkspaceSvg;
 
-  hasMeaningfulChanges = True as BooleanObject;
+  hasMeaningfulChanges = True;
 
   connectedCallback() {
     this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
