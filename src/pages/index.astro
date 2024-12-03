@@ -34,7 +34,7 @@ import Split from 'src/layouts/Split.astro';
 <script>
   import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
-  import {False, True, BooleanObject} from '../BooleanObject';
+  import {False, True } from '../BooleanObject';
   import {AnimationFrameStream} from '../streams';
   import {returning} from '../functions';
   import {copyOffsetParentTransform} from '../htmlElement';
@@ -46,7 +46,7 @@ import Split from 'src/layouts/Split.astro';
   const animationFrame = new AnimationFrameStream(20);
   const generatedElement = document.getElementById('generated')!;
   const generatedCode = generatedElement.querySelector('code')!;
-  let windowWasResized: BooleanObject = True;
+  let windowWasResized = True;
 
   window.addEventListener('resize', () => {
     windowWasResized = True;
