@@ -1,10 +1,10 @@
 import * as Blockly from 'blockly';
-import {blocks} from '../blocks/text';
-import {forBlock} from '../generators/javascript';
+import {blocks} from 'src/blocks/text';
+import {forBlock} from 'src/generators/javascript';
 import {javascriptGenerator} from 'blockly/javascript';
-import {load, save} from '../serialization';
-import {toolbox} from '../toolbox';
-import {BooleanObject, True} from '../BooleanObject';
+import {load, save} from 'src/serialization';
+import {toolbox} from 'src/toolbox';
+import {BooleanObject, True} from 'src/BooleanObject';
 import {copyOffsetParentTransform} from '../htmlElement';
 
 export class BlocklyWorkspace extends HTMLElement {
