@@ -39,7 +39,7 @@ import Split from 'src/layouts/Split.astro';
   import {returning} from '../functions';
   import {copyOffsetParentTransform} from '../htmlElement';
   import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
-  import {getInterpreter, hasInterpreter, stepLine} from 'src/Interpreter';
+  import {getInterpreter, hasInterpreter} from 'src/Interpreter';
 
   const blocklyWorkspace = document.querySelector('blockly-workspace') as BlocklyWorkspace;
   const toggle = new Checkbox('#toggleGeneratedCode');
@@ -84,20 +84,21 @@ import Split from 'src/layouts/Split.astro';
   };
 
   function useGeneratedCode() {
-    const code = generatedCode.textContent = blocklyWorkspace.generateCode();
-    const variables = blocklyWorkspace.getAllVariables();
+    const statements = blocklyWorkspace.generateStatementBlockInfo();
+    generatedCode.textContent = blocklyWorkspace.generateCode();
     const Interpreter = getInterpreter();
-    const myInterpreter = new Interpreter(code)
-    let lineNo = 0;
-    let more = true;
-    while(more) {
-      more = stepLine(myInterpreter)
+    const myInterpreter = new Interpreter('');
+    const cumulativeVariableNames = new Set<string>();
+    for(const [stmtIndex, stmt] of statements.entries()) {
+      myInterpreter.appendCode(stmt.code);
+      myInterpreter.run();
       const stack = myInterpreter.getStateStack();
       const state = stack[stack.length - 1];
-      console.log('line', lineNo++);
-      for(const variable of variables) {
-        const value = state.scope.object.properties[variable.name];
-        console.log(variable.name, value);
+      console.log(stmtIndex, stmt.code);
+      stmt.variables.map(v => v.name).forEach(name => cumulativeVariableNames.add(name));
+      for(const name of cumulativeVariableNames) {
+        const value = state.scope.object.properties[name];
+        console.log(name, value);
       }
     }
     blocklyWorkspace.hasMeaningfulChanges = False;
