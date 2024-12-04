@@ -45,4 +45,8 @@ export class BlocklyWorkspace extends HTMLElement {
     copyOffsetParentTransform(this, this.injectTarget!);
     Blockly.svgResize(this.ws!);
   }
+
+  getAllVariables() {
+    return this.ws!.getAllVariables();
+  }
 }

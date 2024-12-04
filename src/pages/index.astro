@@ -39,6 +39,7 @@ import Split from 'src/layouts/Split.astro';
   import {returning} from '../functions';
   import {copyOffsetParentTransform} from '../htmlElement';
   import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
+  import {getInterpreter, hasInterpreter, stepLine} from 'src/Interpreter';
 
   const blocklyWorkspace = document.querySelector('blockly-workspace') as BlocklyWorkspace;
   const toggle = new Checkbox('#toggleGeneratedCode');
@@ -66,7 +67,7 @@ import Split from 'src/layouts/Split.astro';
       windowWasResized = windowWasResized.if(resizeWorkspace, returnFalse);
     },
     () => {
-      blocklyWorkspace.hasMeaningfulChanges = blocklyWorkspace.hasMeaningfulChanges.if(useGeneratedCode, returnFalse);
+      hasInterpreter().and(blocklyWorkspace.hasMeaningfulChanges).if(useGeneratedCode, returnFalse);
     }];
 
   for(const handler of frameHandlers) {
@@ -83,21 +84,22 @@ import Split from 'src/layouts/Split.astro';
   };
 
   function useGeneratedCode() {
-    // Need to use JS interpreter to be able to remember the state of the variables
-    // But if ultimately using Blockly, I don't need to parse the code to know when an assignment has happened.
-    // While we're on that topic, it seems inefficient to have Blocly generate JS code only to parse it again.
-    // I wonder if I can modify Blockly and the JS interpreter to communicate directly via syntax tree...
-
-    /* Idea: Use javascriptGenerator.STATEMENT_SUFFIX to capture the state of variables at each line
-    const scope = {};
-
-    for(const v of ws.getAllVariables()) {
-      code += `;scope['${v.name}'] = ${v.name}`
+    const code = generatedCode.textContent = blocklyWorkspace.generateCode();
+    const variables = blocklyWorkspace.getAllVariables();
+    const Interpreter = getInterpreter();
+    const myInterpreter = new Interpreter(code)
+    let lineNo = 0;
+    let more = true;
+    while(more) {
+      more = stepLine(myInterpreter)
+      const stack = myInterpreter.getStateStack();
+      const state = stack[stack.length - 1];
+      console.log('line', lineNo++);
+      for(const variable of variables) {
+        const value = state.scope.object.properties[variable.name];
+        console.log(variable.name, value);
+      }
     }
-
-    eval(code);
-     */
-    generatedCode.textContent = blocklyWorkspace.generateCode();
-    return False;
+    blocklyWorkspace.hasMeaningfulChanges = False;
   }
 </script>
