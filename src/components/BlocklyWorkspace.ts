@@ -75,7 +75,7 @@ export class BlocklyWorkspace extends HTMLElement {
         }
         output.push({
           code,
-          variables: getAllVariablesForBlock(block),
+          variables: getVariablesForBlock(block),
           id: block.id
         });
       }
@@ -120,12 +120,34 @@ function getStatementBlocksForWorkspace(ws: Blockly.Workspace): Blockly.Block[] 
 * A.) the getVarModels method only returns the variables defined in the block itself, not those in nested blocks
 * B.) the getChildren method returns not just the nested blocks but also the next statement block, which we don't want to include.
 */
-function getAllVariablesForBlock(block: Blockly.Block, target = new Set<Blockly.VariableModel>()): Set<Blockly.VariableModel> {
+function getVariablesForBlock(block: Blockly.Block, recursive = true, target = new Set<Blockly.VariableModel>()): Set<Blockly.VariableModel> {
   for(const varModel of block.getVarModels()) {
     target.add(varModel);
   }
-  for(const desc of block.getChildren(true).slice(0, -1)) {
-    getAllVariablesForBlock(desc, target);
+  for(const child of getNestedBlocks(block, recursive)) {
+    for(const varModel of child.getVarModels()) {
+      target.add(varModel);
+    }
+  }
+  return target;
+}
+
+/**
+* In Blockly, a block's children include the next statement block, which is not a nested block. This function returns only the nested blocks,
+* closer to how the uninitiated might expect getChildren to work.
+*/
+function getNestedBlocks(block: Blockly.Block, recursive = true, parentStatements = 0, target = [] as Blockly.Block[]): Blockly.Block[] {
+  let children = block.getChildren(true);
+  if(parentStatements === 0) {
+    // If the parent block doesn't contain any statements, remove the last child, which is the next statement block, and therefore not nested.
+    // This has not been tested with blocks where statementInputCount is greater than 1.
+    children = children.slice(0, -1);
+  }
+  for(const child of children) {
+    target.push(child);
+    if(recursive) {
+      getNestedBlocks(child, true, block.statementInputCount + parentStatements, target);
+    }
   }
   return target;
 }
