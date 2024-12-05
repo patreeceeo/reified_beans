@@ -88,15 +88,13 @@ import Split from 'src/layouts/Split.astro';
     generatedCode.textContent = blocklyWorkspace.generateCode();
     const Interpreter = getInterpreter();
     const myInterpreter = new Interpreter('');
-    const cumulativeVariableNames = new Set<string>();
     for(const [stmtIndex, stmt] of statements.entries()) {
       myInterpreter.appendCode(stmt.code);
       myInterpreter.run();
       const stack = myInterpreter.getStateStack();
       const state = stack[stack.length - 1];
       console.log(stmtIndex, stmt.code);
-      stmt.variables.map(v => v.name).forEach(name => cumulativeVariableNames.add(name));
-      for(const name of cumulativeVariableNames) {
+      for(const {name} of stmt.variables) {
         const value = state.scope.object.properties[name];
         console.log(name, value);
       }

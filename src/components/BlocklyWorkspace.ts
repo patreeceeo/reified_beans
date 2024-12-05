@@ -9,7 +9,7 @@ import {copyOffsetParentTransform} from '../htmlElement';
 
 interface StatementBlockInfo {
   code: string;
-  variables: Blockly.VariableModel[];
+  variables: Set<Blockly.VariableModel>;
   id: string;
 }
 
@@ -75,7 +75,7 @@ export class BlocklyWorkspace extends HTMLElement {
         }
         output.push({
           code,
-          variables: block.getVarModels(),
+          variables: getAllVariablesForBlock(block),
           id: block.id
         });
       }
@@ -113,4 +113,19 @@ function getStatementBlocksForBlock(block: Blockly.Block, target: Blockly.Block[
 */
 function getStatementBlocksForWorkspace(ws: Blockly.Workspace): Blockly.Block[] {
   return ws.getTopBlocks(true).flatMap(b => getStatementBlocksForBlock(b));
+}
+
+/**
+* Given a Blockly block, return the set of all variables it contains, including those in nested blocks. This is a bit tricky because:
+* A.) the getVarModels method only returns the variables defined in the block itself, not those in nested blocks
+* B.) the getChildren method returns not just the nested blocks but also the next statement block, which we don't want to include.
+*/
+function getAllVariablesForBlock(block: Blockly.Block, target = new Set<Blockly.VariableModel>()): Set<Blockly.VariableModel> {
+  for(const varModel of block.getVarModels()) {
+    target.add(varModel);
+  }
+  for(const desc of block.getChildren(true).slice(0, -1)) {
+    getAllVariablesForBlock(desc, target);
+  }
+  return target;
 }
