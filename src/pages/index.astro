@@ -84,21 +84,9 @@ import Split from 'src/layouts/Split.astro';
   };
 
   function useGeneratedCode() {
-    const statements = blocklyWorkspace.generateStatementBlockInfo();
-    generatedCode.textContent = blocklyWorkspace.generateCode();
-    const Interpreter = getInterpreter();
-    const myInterpreter = new Interpreter('');
-    for(const [stmtIndex, stmt] of statements.entries()) {
-      myInterpreter.appendCode(stmt.code);
-      myInterpreter.run();
-      const stack = myInterpreter.getStateStack();
-      const state = stack[stack.length - 1];
-      console.log(stmtIndex, stmt.code);
-      for(const {name} of stmt.variables) {
-        const value = state.scope.object.properties[name];
-        console.log(name, value);
-      }
-    }
+    const code = generatedCode.textContent = blocklyWorkspace.generateCode();
+    const Interpreter = getInterpreter()!;
+    new Interpreter(code);
     blocklyWorkspace.hasMeaningfulChanges = False;
   }
 </script>

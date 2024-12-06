@@ -34,7 +34,22 @@ export function hasInterpreter() {
   return "Interpreter" in globalThis ? True : False;
 }
 
-export function getInterpreter(): IJSInterpreterConstructor {
+export function getInterpreter(): IJSInterpreterConstructor | undefined {
   return (globalThis as any).Interpreter
+}
+
+export function interpreterLoaded(maxWaitMs: number = 5000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      if(hasInterpreter()) {
+        clearInterval(interval);
+        resolve();
+      } else if(Date.now() - startTime > maxWaitMs) {
+        clearInterval(interval);
+        reject(new Error("Interpreter not loaded in time"));
+      }
+    }, 100);
+  });
 }
 

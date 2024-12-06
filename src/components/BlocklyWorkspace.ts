@@ -6,12 +6,8 @@ import {load, save} from 'src/serialization';
 import {toolbox} from 'src/toolbox';
 import {True} from 'src/BooleanObject';
 import {copyOffsetParentTransform} from '../htmlElement';
-
-interface StatementBlockInfo {
-  code: string;
-  variables: Set<Blockly.VariableModel>;
-  id: string;
-}
+import {VariableValueIcon} from 'src/icons/VariableValueIcon';
+import {getInterpreter, interpreterLoaded} from 'src/Interpreter';
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
@@ -36,52 +32,18 @@ export class BlocklyWorkspace extends HTMLElement {
         save(ws!);
         if(e.type != Blockly.Events.FINISHED_LOADING && !ws.isDragging()) {
           this.hasMeaningfulChanges = True;
+          this.addCustomIcons();
         }
       }
     });
 
     this.adjustSize();
+    this.addCustomIcons();
   }
 
   generateCode = () => {
     return javascriptGenerator.workspaceToCode(this.ws);
   };
-
-
-  generateStatementBlockInfo(): StatementBlockInfo[] {
-    const workspace = this.ws!;
-    const output = [];
-    javascriptGenerator.init(workspace);
-    const blocks = getStatementBlocksForWorkspace(workspace);
-    for (let i = 0, block; (block = blocks[i]); i++) {
-      // Pass true for opt_thisOnly so we only generate code for this block and not also the attached blocks.
-      let code = javascriptGenerator.blockToCode(block, true);
-      if (Array.isArray(code)) {
-        // Value blocks return tuples of code and operator order.
-        // Top-level blocks don't care about operator order.
-        code = code[0];
-      }
-      if (code) {
-        if (block.outputConnection) {
-          // This block is a naked value.  Ask the language's code generator if
-          // it wants to append a semicolon, or something.
-          code = javascriptGenerator.scrubNakedValue(code);
-          if (javascriptGenerator.STATEMENT_PREFIX && !block.suppressPrefixSuffix) {
-            code = javascriptGenerator.injectId(javascriptGenerator.STATEMENT_PREFIX, block) + code;
-          }
-          if (javascriptGenerator.STATEMENT_SUFFIX && !block.suppressPrefixSuffix) {
-            code = code + javascriptGenerator.injectId(javascriptGenerator.STATEMENT_SUFFIX, block);
-          }
-        }
-        output.push({
-          code,
-          variables: getVariablesForBlock(block),
-          id: block.id
-        });
-      }
-    }
-    return output;
-  }
 
   adjustSize() {
     copyOffsetParentTransform(this, this.injectTarget!);
@@ -91,6 +53,56 @@ export class BlocklyWorkspace extends HTMLElement {
   getAllVariables() {
     return this.ws!.getAllVariables();
   }
+
+  private async addCustomIcons() {
+    const workspace = this.ws!;
+    const statementBlocks = getStatementBlocksForWorkspace(workspace);
+    await interpreterLoaded();
+    const Interpreter = getInterpreter()!;
+    const myInterpreter = new Interpreter('');
+    for(const block of statementBlocks) {
+      let icon: VariableValueIcon;
+      if(!block.hasIcon(VariableValueIcon.TYPE)) {
+        icon = new VariableValueIcon(block);
+        block.addIcon(icon);
+      } else {
+        icon = block.getIcon(VariableValueIcon.TYPE) as VariableValueIcon;
+      }
+      const code = getCodeForBlock(block, workspace);
+      myInterpreter.appendCode(code);
+      myInterpreter.run();
+      const stack = myInterpreter.getStateStack();
+      const state = stack[stack.length - 1];
+      for(const {name} of getVariablesForBlock(block)) {
+        const varVal = state.scope.object.properties[name];
+        icon.bubbleText += `${name} = ${varVal}\n`;
+      }
+    }
+  }
+}
+
+function getCodeForBlock(block: Blockly.Block, workspace: Blockly.Workspace): string {
+  javascriptGenerator.init(workspace);
+  let code = javascriptGenerator.blockToCode(block, true);
+  if (Array.isArray(code)) {
+    // Value blocks return tuples of code and operator order.
+    // Top-level blocks don't care about operator order.
+    code = code[0];
+  }
+  if (code) {
+    if (block.outputConnection) {
+      // This block is a naked value.  Ask the language's code generator if
+      // it wants to append a semicolon, or something.
+      code = javascriptGenerator.scrubNakedValue(code);
+      if (javascriptGenerator.STATEMENT_PREFIX && !block.suppressPrefixSuffix) {
+        code = javascriptGenerator.injectId(javascriptGenerator.STATEMENT_PREFIX, block) + code;
+      }
+      if (javascriptGenerator.STATEMENT_SUFFIX && !block.suppressPrefixSuffix) {
+        code = code + javascriptGenerator.injectId(javascriptGenerator.STATEMENT_SUFFIX, block);
+      }
+    }
+  }
+  return code;
 }
 
 /**
@@ -111,8 +123,8 @@ function getStatementBlocksForBlock(block: Blockly.Block, target: Blockly.Block[
 /**
 * Given a Blockly.Workspace, return the flattened array of statement blocks it contains.
 */
-function getStatementBlocksForWorkspace(ws: Blockly.Workspace): Blockly.Block[] {
-  return ws.getTopBlocks(true).flatMap(b => getStatementBlocksForBlock(b));
+function getStatementBlocksForWorkspace(workspace: Blockly.Workspace): Blockly.Block[] {
+  return workspace.getTopBlocks(true).flatMap(b => getStatementBlocksForBlock(b));
 }
 
 /**
