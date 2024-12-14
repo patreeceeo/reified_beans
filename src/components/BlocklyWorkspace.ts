@@ -45,10 +45,8 @@ export class BlocklyWorkspace extends HTMLElement {
   }
 
   generateCode = () => {
-    // return javascriptGenerator.workspaceToCode(this.ws);
     this.generator.init(this.ws!);
     const tree = this.generator.workspaceToTree(this.ws!);
-    console.log("tree:", tree);
     return tree.toString();
   };
 
