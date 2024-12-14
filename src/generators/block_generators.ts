@@ -11,7 +11,7 @@ forBlock['variables_get'] = (block: Blockly.Block, generator: ASTGenerator): Ide
   const varName = block.getFieldValue('VAR');
   const variable = generator.getVariable(varName);
   const idNode = new IdentifierNode(variable);
-  const right = generator.valueToTree(block, 'MESSAGE');
+  const right = generator.valueToTree(block, 'MESSAGE', false);
   if(right !== null && BinaryExpressionRightTree.isValid(right)) {
     return new BinaryExpressionTree(idNode, right.message, right.right);
   }

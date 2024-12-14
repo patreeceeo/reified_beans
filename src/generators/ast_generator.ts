@@ -126,9 +126,9 @@ export class ASTGenerator {
    * @returns Generated tree or null if no blocks are connected.
    * @throws ReferenceError if the specified input does not exist.
    */
-  valueToTree(block: Blockly.Block, name: string): AbstractSyntaxTree | null {
+  valueToTree(block: Blockly.Block, name: string, opt_required = true): AbstractSyntaxTree | null {
     const targetBlock = block.getInputTargetBlock(name);
-    invariant(targetBlock && block.getInput(name), `Input "${name}" doesn't exist on "${block.type}"`, ReferenceError);
+    invariant(targetBlock || !opt_required, `Input "${name}" doesn't exist on "${block.type}"`, ReferenceError);
     return this.blockToTree(targetBlock);
   }
 
