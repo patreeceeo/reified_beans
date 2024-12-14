@@ -1,4 +1,4 @@
-import {False, True} from "./BooleanObject";
+import {False, True} from "./messagePassing/boolean";
 
 interface Interpreter {
   run(): boolean;

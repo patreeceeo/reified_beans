@@ -1,4 +1,4 @@
-import { BooleanObject, False, True } from '../BooleanObject';
+import { BooleanObject, False, True } from '../messagePassing/boolean';
 import {invariant} from '../errors';
 
 export class Checkbox {

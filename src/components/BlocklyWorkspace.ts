@@ -1,13 +1,13 @@
 import * as Blockly from 'blockly';
-import {blocks} from 'src/blocks/text';
-import {forBlock} from 'src/generators/javascript';
-import {javascriptGenerator} from 'blockly/javascript';
 import {load, save} from 'src/serialization';
 import {toolbox} from 'src/toolbox';
-import {True} from 'src/BooleanObject';
+import {True} from 'src/messagePassing/boolean';
 import {copyOffsetParentTransform} from '../htmlElement';
-import {VariableValueIcon} from 'src/icons/VariableValueIcon';
-import {getInterpreter, interpreterLoaded} from 'src/Interpreter';
+// import {VariableValueIcon} from 'src/icons/VariableValueIcon';
+// import {Scope} from 'src/messagePassing/scope';
+import {blocks as basicBlocks} from 'src/blocks/basic';
+import {blocks as functionBlocks} from 'src/blocks/functions';
+import {ASTGenerator} from 'src/generators/ast_generator';
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
@@ -15,13 +15,15 @@ export class BlocklyWorkspace extends HTMLElement {
 
   hasMeaningfulChanges = True;
 
+  generator = new ASTGenerator();
+
   connectedCallback() {
     this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
     const ws = this.ws = Blockly.inject(this.injectTarget, {toolboxPosition: 'end', toolbox});
 
     // Register the blocks and generator with Blockly
-    Blockly.common.defineBlocks(blocks);
-    Object.assign(javascriptGenerator.forBlock, forBlock);
+    Blockly.common.defineBlocks(basicBlocks);
+    Blockly.common.defineBlocks(functionBlocks);
 
     load(ws);
 
@@ -39,10 +41,15 @@ export class BlocklyWorkspace extends HTMLElement {
 
     this.adjustSize();
     this.addCustomIcons();
+    this.generator.init(ws);
   }
 
   generateCode = () => {
-    return javascriptGenerator.workspaceToCode(this.ws);
+    // return javascriptGenerator.workspaceToCode(this.ws);
+    this.generator.init(this.ws!);
+    const tree = this.generator.workspaceToTree(this.ws!);
+    console.log("tree:", tree);
+    return tree.toString();
   };
 
   adjustSize() {
@@ -56,53 +63,57 @@ export class BlocklyWorkspace extends HTMLElement {
 
   private async addCustomIcons() {
     const workspace = this.ws!;
-    const statementBlocks = getStatementBlocksForWorkspace(workspace);
-    await interpreterLoaded();
-    const Interpreter = getInterpreter()!;
-    const myInterpreter = new Interpreter('');
-    for(const block of statementBlocks) {
-      let icon: VariableValueIcon;
-      if(!block.hasIcon(VariableValueIcon.TYPE)) {
-        icon = new VariableValueIcon(block);
-        block.addIcon(icon);
-      } else {
-        icon = block.getIcon(VariableValueIcon.TYPE) as VariableValueIcon;
-      }
-      const code = getCodeForBlock(block, workspace);
-      myInterpreter.appendCode(code);
-      myInterpreter.run();
-      const stack = myInterpreter.getStateStack();
-      const state = stack[stack.length - 1];
-      for(const {name} of getVariablesForBlock(block)) {
-        const varVal = state.scope.object.properties[name];
-        icon.bubbleText += `${name} = ${varVal}\n`;
-      }
-    }
+    // const scope = new Scope();
+    // const statementBlocks = getStatementBlocksForWorkspace(workspace);
+    // await interpreterLoaded();
+    // const Interpreter = getInterpreter()!;
+    // const myInterpreter = new Interpreter('');
+    // for(const block of statementBlocks) {
+    //   let icon: VariableValueIcon;
+    //   if(!block.hasIcon(VariableValueIcon.TYPE)) {
+    //     icon = new VariableValueIcon(block);
+    //     block.addIcon(icon);
+    //   } else {
+    //     icon = block.getIcon(VariableValueIcon.TYPE) as VariableValueIcon;
+    //   }
+    //   const code = getCodeForBlock(block, workspace);
+      // myInterpreter.appendCode(code);
+      // myInterpreter.run();
+      // const stack = myInterpreter.getStateStack();
+      // const state = stack[stack.length - 1];
+      // evaluate(code, scope)
+      // for(const {name} of getVariablesForBlock(block)) {
+        // const varVal = state.scope.object.properties[name];
+        // const varVal = scope.get(name);
+        // icon.bubbleText += `${name} = ${varVal}\n`;
+      // }
+    // }
   }
 }
 
 function getCodeForBlock(block: Blockly.Block, workspace: Blockly.Workspace): string {
-  javascriptGenerator.init(workspace);
-  let code = javascriptGenerator.blockToCode(block, true);
-  if (Array.isArray(code)) {
-    // Value blocks return tuples of code and operator order.
-    // Top-level blocks don't care about operator order.
-    code = code[0];
-  }
-  if (code) {
-    if (block.outputConnection) {
-      // This block is a naked value.  Ask the language's code generator if
-      // it wants to append a semicolon, or something.
-      code = javascriptGenerator.scrubNakedValue(code);
-      if (javascriptGenerator.STATEMENT_PREFIX && !block.suppressPrefixSuffix) {
-        code = javascriptGenerator.injectId(javascriptGenerator.STATEMENT_PREFIX, block) + code;
-      }
-      if (javascriptGenerator.STATEMENT_SUFFIX && !block.suppressPrefixSuffix) {
-        code = code + javascriptGenerator.injectId(javascriptGenerator.STATEMENT_SUFFIX, block);
-      }
-    }
-  }
-  return code;
+  // javascriptGenerator.init(workspace);
+  // let code = javascriptGenerator.blockToCode(block, true);
+  // if (Array.isArray(code)) {
+  //   // Value blocks return tuples of code and operator order.
+  //   // Top-level blocks don't care about operator order.
+  //   code = code[0];
+  // }
+  // if (code) {
+  //   if (block.outputConnection) {
+  //     // This block is a naked value.  Ask the language's code generator if
+  //     // it wants to append a semicolon, or something.
+  //     code = javascriptGenerator.scrubNakedValue(code);
+  //     if (javascriptGenerator.STATEMENT_PREFIX && !block.suppressPrefixSuffix) {
+  //       code = javascriptGenerator.injectId(javascriptGenerator.STATEMENT_PREFIX, block) + code;
+  //     }
+  //     if (javascriptGenerator.STATEMENT_SUFFIX && !block.suppressPrefixSuffix) {
+  //       code = code + javascriptGenerator.injectId(javascriptGenerator.STATEMENT_SUFFIX, block);
+  //     }
+  //   }
+  // }
+  // return code;
+  return '';
 }
 
 /**

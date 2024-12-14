@@ -1,5 +1,5 @@
 import Split from 'split.js';
-import {False, True} from '../BooleanObject';
+import {False, True} from '../messagePassing/boolean';
 
 export class SplitLayout extends HTMLElement {
   split?: Split.Instance;

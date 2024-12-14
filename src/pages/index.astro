@@ -34,7 +34,7 @@ import Split from 'src/layouts/Split.astro';
 <script>
   import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
-  import {False, True } from '../BooleanObject';
+  import {False, True } from '../messagePassing/boolean';
   import {AnimationFrameStream} from '../streams';
   import {returning} from '../functions';
   import {copyOffsetParentTransform} from '../htmlElement';
@@ -85,8 +85,11 @@ import Split from 'src/layouts/Split.astro';
 
   function useGeneratedCode() {
     const code = generatedCode.textContent = blocklyWorkspace.generateCode();
+    /*
     const Interpreter = getInterpreter()!;
     new Interpreter(code);
+    */
     blocklyWorkspace.hasMeaningfulChanges = False;
   }
+
 </script>
