@@ -34,9 +34,7 @@ import Split from 'src/layouts/Split.astro';
 <script>
   import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
-  import {False, True } from '../messagePassing/boolean';
   import {AnimationFrameStream} from '../streams';
-  import {returning} from '../functions';
   import {copyOffsetParentTransform} from '../htmlElement';
   import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
 
@@ -45,27 +43,34 @@ import Split from 'src/layouts/Split.astro';
   const split = document.getElementById('pageContainer') as SplitLayout;
   const animationFrame = new AnimationFrameStream(20);
   const generatedCodeElement = document.getElementById('generated')!;
-  let windowWasResized = True;
+  let windowWasResized = true;
 
   window.addEventListener('resize', () => {
-    windowWasResized = True;
+    windowWasResized = true;
   });
-
-  const returnFalse = returning(False);
 
   const frameHandlers = [
     () => {
       const {checked} = toggle;
-      generatedCodeElement.style.display = checked.if(() => 'block', () => 'none');
+      generatedCodeElement.style.display = checked ? 'block' : 'none';
     },
     () => {
-      split.changed = split.changed.if(resizeWorkspace, returnFalse);
+      if(split.changed) {
+        resizeWorkspace();
+        split.changed = false;
+      }
     },
     () => {
-      windowWasResized = windowWasResized.if(resizeWorkspace, returnFalse);
+      if(windowWasResized) {
+        resizeWorkspace();
+        windowWasResized = false;
+      }
     },
     () => {
-      blocklyWorkspace.hasMeaningfulChanges.if(useGeneratedCode, returnFalse);
+      if(blocklyWorkspace.hasMeaningfulChanges) {
+        useGeneratedCode();
+        blocklyWorkspace.hasMeaningfulChanges = false;
+      }
     }];
 
   for(const handler of frameHandlers) {
@@ -78,14 +83,12 @@ import Split from 'src/layouts/Split.astro';
   function resizeWorkspace() {
     copyOffsetParentTransform(blocklyWorkspace, generatedCodeElement);
     blocklyWorkspace.adjustSize();
-    return False;
   };
 
   function useGeneratedCode() {
     const machine = blocklyWorkspace.compileWorkspace();
     const result = machine.run();
     console.log("Result", result);
-    blocklyWorkspace.hasMeaningfulChanges = False;
   }
 
 </script>

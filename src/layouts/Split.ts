@@ -1,9 +1,8 @@
 import Split from 'split.js';
-import {False, True} from '../messagePassing/boolean';
 
 export class SplitLayout extends HTMLElement {
   split?: Split.Instance;
-  changed = False;
+  changed = false;
   connectedCallback() {
     const options = JSON.parse(this.dataset.options!);
     const config = {
@@ -14,7 +13,7 @@ export class SplitLayout extends HTMLElement {
     Split([this.children[0] as HTMLElement, this.children[1] as HTMLElement], config);
   }
   onDrag = () => {
-    this.changed = True;
+    this.changed = true;
   }
 }
 

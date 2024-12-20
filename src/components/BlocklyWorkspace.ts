@@ -1,7 +1,6 @@
 import * as Blockly from 'blockly';
 import {load, save} from 'src/serialization';
 import {toolbox} from 'src/toolbox';
-import {True} from 'src/messagePassing/boolean';
 import {copyOffsetParentTransform} from '../htmlElement';
 import {blocks as basicBlocks} from 'src/blocks/basic';
 import {Compiler} from 'src/compiler';
@@ -11,7 +10,7 @@ export class BlocklyWorkspace extends HTMLElement {
   private ws?: Blockly.WorkspaceSvg;
   private compiler?: Compiler;
 
-  hasMeaningfulChanges = True;
+  hasMeaningfulChanges = true;
 
   connectedCallback() {
     this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
@@ -29,7 +28,7 @@ export class BlocklyWorkspace extends HTMLElement {
       if (!e.isUiEvent) {
         save(ws!);
         if(e.type != Blockly.Events.FINISHED_LOADING && !ws.isDragging()) {
-          this.hasMeaningfulChanges = True;
+          this.hasMeaningfulChanges = true;
           this.addCustomIcons();
         }
       }
