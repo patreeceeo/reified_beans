@@ -6,6 +6,7 @@ import {Nil} from "./nil";
 
 export class Machine {
   stack = Stack<MachineStackItem>();
+  result: any = Nil;
   constructor(
     readonly ops = [] as ReadonlyArray<MachineOp>,
     readonly addressMap: Readonly<Record<string, VirtualMachineAddress>> = {}
@@ -25,7 +26,7 @@ export class Machine {
       state = this.stack.peek()!;
     } while(!state.halted);
 
-    return state.args.shift() ?? Nil;
+    return this.result = state.args.shift() ?? Nil;
   }
 
   reset() {

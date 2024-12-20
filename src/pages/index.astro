@@ -1,59 +1,46 @@
 ---
 import BlocklyWorkspace from 'src/components/BlocklyWorkspace.astro';
+import MachineXRay from 'src/components/MachineXRay.astro';
 import Layout from 'src/layouts/Layout.astro';
 import Split from 'src/layouts/Split.astro';
 ---
 <Layout title="Editor">
   <Split id="pageContainer">
     <section slot="1">
-      Hello
-    </section>
-    <section slot="2">
-      <label><input id="toggleGeneratedCode" type="checkbox"/>Show Generated Code</label>
-      <button class="spacer">&nbsp;</button>
       <BlocklyWorkspace/>
-      <pre id="generated"></pre>
+    </section>
+    <section slot="2" id="output">
+      <MachineXRay/>
     </section>
   </Split>
 </Layout>
 <style>
-  #generated {
-    position: absolute;
-    z-index: 1;
-    background-color: rgb(247, 240, 228);
-  }
-
   #pageContainer {
     height: 100vh;
   }
 
-  .spacer {
-    opacity: 0;
+  #output {
+    background-color: lightskyblue;
   }
 </style>
 <script>
-  import { Checkbox } from '../inputs/Checkbox.ts';
   import type {SplitLayout} from '../layouts/Split';
   import {AnimationFrameStream} from '../streams';
-  import {copyOffsetParentTransform} from '../htmlElement';
   import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
+  import {MachineXRay} from 'src/components/MachineXRay';
 
   const blocklyWorkspace = document.querySelector('blockly-workspace') as BlocklyWorkspace;
-  const toggle = new Checkbox('#toggleGeneratedCode');
   const split = document.getElementById('pageContainer') as SplitLayout;
+  const machineXRay = MachineXRay.findElement();
   const animationFrame = new AnimationFrameStream(20);
-  const generatedCodeElement = document.getElementById('generated')!;
   let windowWasResized = true;
+  let needRender = true;
 
   window.addEventListener('resize', () => {
     windowWasResized = true;
   });
 
   const frameHandlers = [
-    () => {
-      const {checked} = toggle;
-      generatedCodeElement.style.display = checked ? 'block' : 'none';
-    },
     () => {
       if(split.changed) {
         resizeWorkspace();
@@ -67,11 +54,18 @@ import Split from 'src/layouts/Split.astro';
       }
     },
     () => {
+      if(machineXRay.isConnected && needRender) {
+        machineXRay.render();
+        needRender = false;
+      }
+    },
+    () => {
       if(blocklyWorkspace.hasMeaningfulChanges) {
         useGeneratedCode();
         blocklyWorkspace.hasMeaningfulChanges = false;
       }
-    }];
+    },
+  ];
 
   for(const handler of frameHandlers) {
     animationFrame.subscribe(handler);
@@ -79,16 +73,15 @@ import Split from 'src/layouts/Split.astro';
 
   setTimeout(() => animationFrame.start(), 100);
 
-
   function resizeWorkspace() {
-    copyOffsetParentTransform(blocklyWorkspace, generatedCodeElement);
     blocklyWorkspace.adjustSize();
   };
 
   function useGeneratedCode() {
     const machine = blocklyWorkspace.compileWorkspace();
-    const result = machine.run();
-    console.log("Result", result);
+    machine.run();
+    machineXRay.machine = machine;
+    needRender = true;
   }
 
 </script>

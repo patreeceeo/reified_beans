@@ -29,10 +29,6 @@ export class Compiler {
       this.processQueue();
     }
     this.ops.push(newMachineOp("Halt"));
-    console.log("Compiled machine ops:");
-    for(const op of this.ops) {
-      console.log(op.toString());
-    }
     return new Machine(this.ops);
   }
 
