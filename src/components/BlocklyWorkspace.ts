@@ -4,6 +4,11 @@ import {toolbox} from 'src/toolbox';
 import {copyOffsetParentTransform} from '../htmlElement';
 import {blocks as basicBlocks} from 'src/blocks/basic';
 import {Compiler} from 'src/compiler';
+import {
+  ContinuousToolbox,
+  ContinuousFlyout,
+  ContinuousMetrics,
+} from "@blockly/continuous-toolbox";
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
@@ -14,11 +19,18 @@ export class BlocklyWorkspace extends HTMLElement {
 
   connectedCallback() {
     this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
-    const ws = this.ws = Blockly.inject(this.injectTarget, {toolboxPosition: 'end', toolbox});
 
     // Register the blocks and generator with Blockly
+    // This needs to happen before injecting Blockly
     Blockly.common.defineBlocks(basicBlocks);
-    // Blockly.common.defineBlocks(functionBlocks);
+
+    const ws = this.ws = Blockly.inject(this.injectTarget, {
+      plugins: {
+        toolbox: ContinuousToolbox,
+        flyoutsVerticalToolbox: ContinuousFlyout,
+        metricsManager: ContinuousMetrics,
+      },
+      toolboxPosition: 'end', toolbox});
 
     load(ws);
 
