@@ -34,6 +34,7 @@ function parseSelector(selector: string) {
   return {tagName, classNames, id, attrs};
 }
 
+// TODO just use React
 /** Create an element matching selector and append it to parent */
 export const newEl = (selector: string, children: string | HTMLElement | HTMLElement[] = '') => {
   const {tagName, classNames, id, attrs} = parseSelector(selector);
