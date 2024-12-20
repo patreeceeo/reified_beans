@@ -3,19 +3,15 @@ import {load, save} from 'src/serialization';
 import {toolbox} from 'src/toolbox';
 import {True} from 'src/messagePassing/boolean';
 import {copyOffsetParentTransform} from '../htmlElement';
-// import {VariableValueIcon} from 'src/icons/VariableValueIcon';
-// import {Scope} from 'src/messagePassing/scope';
 import {blocks as basicBlocks} from 'src/blocks/basic';
-import {blocks as functionBlocks} from 'src/blocks/functions';
-import {ASTGenerator} from 'src/generators/ast_generator';
+import {Compiler} from 'src/compiler';
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
   private ws?: Blockly.WorkspaceSvg;
+  private compiler?: Compiler;
 
   hasMeaningfulChanges = True;
-
-  generator = new ASTGenerator();
 
   connectedCallback() {
     this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
@@ -23,7 +19,7 @@ export class BlocklyWorkspace extends HTMLElement {
 
     // Register the blocks and generator with Blockly
     Blockly.common.defineBlocks(basicBlocks);
-    Blockly.common.defineBlocks(functionBlocks);
+    // Blockly.common.defineBlocks(functionBlocks);
 
     load(ws);
 
@@ -41,13 +37,11 @@ export class BlocklyWorkspace extends HTMLElement {
 
     this.adjustSize();
     this.addCustomIcons();
-    this.generator.init(ws);
+    this.compiler = new Compiler(ws);
   }
 
-  generateCode = () => {
-    this.generator.init(this.ws!);
-    const tree = this.generator.workspaceToTree(this.ws!);
-    return tree.toString();
+  compileWorkspace = () => {
+    return this.compiler!.compile();
   };
 
   adjustSize() {
@@ -60,7 +54,7 @@ export class BlocklyWorkspace extends HTMLElement {
   }
 
   private async addCustomIcons() {
-    const workspace = this.ws!;
+    // const workspace = this.ws!;
     // const scope = new Scope();
     // const statementBlocks = getStatementBlocksForWorkspace(workspace);
     // await interpreterLoaded();

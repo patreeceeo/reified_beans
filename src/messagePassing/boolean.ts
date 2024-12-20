@@ -1,9 +1,10 @@
-// TODO don't use this, except maybe in the interpreter
+
+/** @deprecated */
 export abstract class BooleanObject {
   abstract if<T = void>(lambaTrue: () => T, lambdaFalse: () => T): T;
   abstract and(other: BooleanObject): BooleanObject;
 }
-class TrueClass extends BooleanObject {
+class TrueClassOld extends BooleanObject {
   if<T>(lamba: () => T) {
     return lamba();
   }
@@ -17,7 +18,7 @@ class TrueClass extends BooleanObject {
     return False;
   }
 }
-class FalseClass extends BooleanObject {
+class FalseClassOld extends BooleanObject {
   if<T>(_lambaTrue: () => T, lamba: () => T) {
     return lamba();
   }
@@ -32,6 +33,6 @@ class FalseClass extends BooleanObject {
   }
 }
 
-export const True = new TrueClass() as BooleanObject;
-export const False = new FalseClass() as BooleanObject;
+export const True = new TrueClassOld() as BooleanObject;
+export const False = new FalseClassOld() as BooleanObject;
 

@@ -12,7 +12,7 @@ import Split from 'src/layouts/Split.astro';
       <label><input id="toggleGeneratedCode" type="checkbox"/>Show Generated Code</label>
       <button class="spacer">&nbsp;</button>
       <BlocklyWorkspace/>
-      <pre id="generated"><code></code></pre>
+      <pre id="generated"></pre>
     </section>
   </Split>
 </Layout>
@@ -39,14 +39,12 @@ import Split from 'src/layouts/Split.astro';
   import {returning} from '../functions';
   import {copyOffsetParentTransform} from '../htmlElement';
   import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
-  import {getInterpreter, hasInterpreter} from 'src/Interpreter';
 
   const blocklyWorkspace = document.querySelector('blockly-workspace') as BlocklyWorkspace;
   const toggle = new Checkbox('#toggleGeneratedCode');
   const split = document.getElementById('pageContainer') as SplitLayout;
   const animationFrame = new AnimationFrameStream(20);
-  const generatedElement = document.getElementById('generated')!;
-  const generatedCode = generatedElement.querySelector('code')!;
+  const generatedCodeElement = document.getElementById('generated')!;
   let windowWasResized = True;
 
   window.addEventListener('resize', () => {
@@ -58,7 +56,7 @@ import Split from 'src/layouts/Split.astro';
   const frameHandlers = [
     () => {
       const {checked} = toggle;
-      generatedElement.style.display = checked.if(() => 'block', () => 'none');
+      generatedCodeElement.style.display = checked.if(() => 'block', () => 'none');
     },
     () => {
       split.changed = split.changed.if(resizeWorkspace, returnFalse);
@@ -67,7 +65,7 @@ import Split from 'src/layouts/Split.astro';
       windowWasResized = windowWasResized.if(resizeWorkspace, returnFalse);
     },
     () => {
-      hasInterpreter().and(blocklyWorkspace.hasMeaningfulChanges).if(useGeneratedCode, returnFalse);
+      blocklyWorkspace.hasMeaningfulChanges.if(useGeneratedCode, returnFalse);
     }];
 
   for(const handler of frameHandlers) {
@@ -78,17 +76,15 @@ import Split from 'src/layouts/Split.astro';
 
 
   function resizeWorkspace() {
-    copyOffsetParentTransform(blocklyWorkspace, generatedElement);
+    copyOffsetParentTransform(blocklyWorkspace, generatedCodeElement);
     blocklyWorkspace.adjustSize();
     return False;
   };
 
   function useGeneratedCode() {
-    const code = generatedCode.textContent = blocklyWorkspace.generateCode();
-    /*
-    const Interpreter = getInterpreter()!;
-    new Interpreter(code);
-    */
+    const machine = blocklyWorkspace.compileWorkspace();
+    const result = machine.run();
+    console.log("Result", result);
     blocklyWorkspace.hasMeaningfulChanges = False;
   }
 

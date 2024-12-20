@@ -2,37 +2,44 @@
 export const toolbox = {
   kind: 'categoryToolbox',
   contents: [
-    {
-      kind: 'category',
-      name: 'Variables',
-      categorystyle: 'variable_category',
-      contents: [
-        {
-          kind: 'block',
-          type: 'variables_get',
-          fields: {
-            VAR: 'item',
-          },
-        },
-      ],
-    },
+    // {
+    //   kind: 'category',
+    //   name: 'Variables',
+    //   categorystyle: 'variable_category',
+    //   contents: [
+    //     {
+    //       kind: 'block',
+    //       type: 'variables_get',
+    //       fields: {
+    //         VAR: 'item',
+    //       },
+    //     },
+    //     {
+    //       kind: 'block',
+    //       type: 'variables_set',
+    //       fields: {
+    //         VAR: 'item',
+    //       },
+    //     },
+    //   ],
+    // },
     {
       kind: 'category',
       name: 'Controls',
       categorystyle: 'procedure_category',
       contents: [
+        // {
+        //   kind: 'block',
+        //   type: 'procedures_defreturn',
+        // },
         {
           kind: 'block',
-          type: 'procedures_defreturn',
+          type: 'controls_begin_statement',
         },
         {
           kind: 'block',
-          type: 'statements_delimiter',
+          type: 'messages_binary',
         },
-        {
-          kind: 'block',
-          type: 'messages_send_binary',
-        }
       ],
     },
     {
