@@ -29,12 +29,25 @@ export const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     nextStatement: null,
   },
   {
-    type: 'messages_binary',
+    type: 'number_messages_binary',
     message0: '%1 %2',
     args0: [
       {
-        type: 'field_input',
-        name: 'OP',
+        "type": "field_dropdown",
+        "name": "OP",
+        "options": [
+          [ ">", ">" ],
+          [ "<", "<" ],
+          [ "≤", "<=" ],
+          [ "≥", ">=" ],
+          [ "+", "+" ],
+          [ "-", "-" ],
+          [ "*", "*" ],
+          [ "/", "/" ],
+          [ "%", "%" ],
+          [ "=", "=" ],
+          [ "≠", "!=" ]
+        ]
       },
       {
         type: 'input_value',

@@ -38,7 +38,7 @@ export const toolbox = {
         },
         {
           kind: 'block',
-          type: 'messages_binary',
+          type: 'number_messages_binary',
         },
       ],
     },

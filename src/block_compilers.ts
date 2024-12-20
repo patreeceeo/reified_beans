@@ -20,15 +20,15 @@ export const controls_begin_statement: BlockCompiler = (block, compiler) => {
   ]
 }
 
-export const messages_binary: BlockCompiler = (block, compiler) => {
+export const number_messages_binary: BlockCompiler = (block, compiler) => {
   const nextBlock = block.getInputTargetBlock('NEXT')!;
   if(nextBlock === null) {
-    console.log("No next block for messages_binary");
+    console.log("No next block for number_messages_binary");
     return [];
   }
   const nextBlockValueField = nextBlock.getField('VALUE');
   if(nextBlockValueField === null) {
-    console.log("No value field for next block of messages_binary");
+    console.log("No value field for next block of number_messages_binary");
     return [];
   }
   compiler.queueNextBlock(nextBlock);
