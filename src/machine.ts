@@ -21,8 +21,10 @@ export class Machine {
     }
     do {
       invariant(state !== undefined, "Machine stack is empty");
+      state.args.verifyIntegrity();
       const op = this.ops[state.pc++];
       op.doIt(this.stack);
+      this.stack.verifyIntegrity();
       state = this.stack.peek()!;
     } while(!state.halted);
 
