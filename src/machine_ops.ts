@@ -151,6 +151,6 @@ const MachineOps = {
   Basic,
 };
 
-export function newMachineOp(opName: keyof typeof MachineOps, ...args: ConstructorParameters<typeof MachineOps[keyof typeof MachineOps]>) {
+export function newMachineOp<OpName extends keyof typeof MachineOps>(opName: OpName, ...args: ConstructorParameters<typeof MachineOps[OpName]>) {
   return new (MachineOps[opName] as any)(...args);
 }
