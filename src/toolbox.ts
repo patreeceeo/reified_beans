@@ -26,7 +26,7 @@ export const toolbox = {
     {
       kind: 'category',
       name: 'Controls',
-      categorystyle: 'procedure_category',
+      categorystyle: 'controls_category',
       contents: [
         // {
         //   kind: 'block',
@@ -36,16 +36,11 @@ export const toolbox = {
           kind: 'block',
           type: 'controls_begin_statement',
         },
-        {
-          kind: 'block',
-          type: 'number_messages_binary',
-        },
       ],
     },
     {
       kind: 'category',
-      name: 'Values',
-      categorystyle: 'math_category',
+      name: 'Numbers',
       contents: [
         {
           kind: 'block',
@@ -54,7 +49,32 @@ export const toolbox = {
             NUM: 123,
           },
         },
-      ]
+        {
+          kind: 'block',
+          type: 'number_messages_binary',
+        },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Booleans',
+      contents: [
+        {
+          kind: 'block',
+          type: 'boolean_messages_ifTrue_ifFalse',
+        },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Functions',
+      categorystyle: 'procedure_category',
+      contents: [
+        {
+          kind: 'block',
+          type: 'procedures_defreturn',
+        },
+      ],
     }
     // {
     //   kind: 'category',

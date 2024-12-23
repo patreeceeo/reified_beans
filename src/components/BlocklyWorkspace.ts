@@ -2,13 +2,15 @@ import * as Blockly from 'blockly';
 import {load, save} from 'src/serialization';
 import {toolbox} from 'src/toolbox';
 import {copyOffsetParentTransform} from '../htmlElement';
-import {blocks as basicBlocks} from 'src/blocks/basic';
+import basicBlocks from 'src/blocks/basic';
+import functionBlocks from 'src/blocks/functions';
 import {Compiler} from 'src/compiler';
 import {
   ContinuousToolbox,
   ContinuousFlyout,
   ContinuousMetrics,
 } from "@blockly/continuous-toolbox";
+import {unregisterProcedureBlocks} from 'src/procedures';
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
@@ -20,9 +22,12 @@ export class BlocklyWorkspace extends HTMLElement {
   connectedCallback() {
     this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
 
+    // We're overriding the default procedures blocks
+    unregisterProcedureBlocks();
     // Register the blocks and generator with Blockly
     // This needs to happen before injecting Blockly
     Blockly.common.defineBlocks(basicBlocks);
+    Blockly.common.defineBlocks(functionBlocks);
 
     const ws = this.ws = Blockly.inject(this.injectTarget, {
       plugins: {

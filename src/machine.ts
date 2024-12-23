@@ -1,15 +1,16 @@
 import type {MachineOp} from "./machine_ops";
 import {MachineStackItem} from "./machine_stack_item";
-import {Stack} from "./generics";
+import {Dict, Stack, type ReadonlyDict} from "./generics";
 import {invariant} from "./Error";
 import {Nil} from "./nil";
+import {getBoxedValue, type BoxedValue} from "./boxed_value";
 
 export class Machine {
   stack = Stack<MachineStackItem>();
-  result: any = Nil;
+  result: BoxedValue = getBoxedValue(Nil);
   constructor(
     readonly ops = [] as ReadonlyArray<MachineOp>,
-    readonly addressMap: Readonly<Record<string, VirtualMachineAddress>> = {}
+    readonly addressBook: ReadonlyDict<VirtualMachineAddress> = Dict<VirtualMachineAddress>()
   ) {
     this.reset();
   }
@@ -23,16 +24,17 @@ export class Machine {
       invariant(state !== undefined, "Machine stack is empty");
       state.args.verifyIntegrity();
       const op = this.ops[state.pc++];
-      op.doIt(this.stack);
+      op.doIt(this.stack, this.addressBook);
       this.stack.verifyIntegrity();
       state = this.stack.peek()!;
     } while(!state.halted);
 
-    return this.result = state.args.shift() ?? Nil;
+    return this.result = state.args.shift() ?? getBoxedValue(Nil);
   }
 
   reset() {
     this.stack.length = 0;
-    this.stack.push(new MachineStackItem());
+    const state = new MachineStackItem()
+    this.stack.push(state);
   }
 }

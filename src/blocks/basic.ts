@@ -1,5 +1,5 @@
 import * as Blockly from 'blockly/core';
-export const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([
+export default Blockly.common.createBlockDefinitionsFromJsonArray([
   {
     type: 'math_number',
     message0: '%1 %2',
@@ -45,7 +45,7 @@ export const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([
           [ "*", "*" ],
           [ "/", "/" ],
           [ "%", "%" ],
-          [ "=", "=" ],
+          [ "=", "==" ],
           [ "≠", "!=" ]
         ]
       },
@@ -55,6 +55,21 @@ export const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([
       },
     ],
     output: null,
+  },
+  {
+    type: 'boolean_messages_ifTrue_ifFalse',
+    message0: 'ifTrue %1 ifFalse %2',
+    args0: [
+      {
+        type: 'input_value',
+        name: 'IF_TRUE',
+      },
+      {
+        type: 'input_value',
+        name: 'IF_FALSE',
+      },
+    ],
+    output: 'Boolean',
   }
   // Block for an identifier.
   // {

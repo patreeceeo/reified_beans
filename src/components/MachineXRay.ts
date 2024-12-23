@@ -28,8 +28,8 @@ export class MachineXRay extends HTMLElement {
     })
   }
 
-  renderOp = (op: MachineOp) => {
-    return newEl('.op', op.toString());
+  renderOp = (op: MachineOp, i: number) => {
+    return newEl('.op', `${i}: ${op.toString()}`);
   }
 }
 

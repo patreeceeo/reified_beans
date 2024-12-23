@@ -1,3 +1,4 @@
+import {getBoxedValue, type BoxedValue} from "./boxed_value";
 import { Nil } from "./nil";
 
 /**
@@ -10,26 +11,16 @@ import { Nil } from "./nil";
 * - Use a specialized class for non-nested scopes or vice-versa?
 */
 export class Scope {
-  private items: { [key: string]: any } = Object.create(null);
-
-  static new(parent: Scope | null = null) {
-    return new Scope(parent);
-  }
-
-  // lastValue: any;
+  private items: { [key: string]: BoxedValue } = Object.create(null);
 
   constructor(readonly parent: Scope | null = null) {
   }
 
-  get(key: string, defaultValue: any = Nil): any {
+  get(key: string, defaultValue = getBoxedValue(Nil)): BoxedValue {
     return this.items[key] ?? this.parent?.get(key) ?? defaultValue;
   }
 
-  // declare(key: string): Nil {
-  //   this.set(key, Nil);
-  // }
-
-  set(key: string, value: any): any {
+  set(key: string, value: BoxedValue): BoxedValue {
     // Find the scope where the variable is defined
     let scope: Scope = this;
     while (scope.parent && !(key in scope.items)) {
@@ -42,10 +33,4 @@ export class Scope {
   has(key: string): boolean {
     return key in this.items || (this.parent?.has(key) ?? false);
   }
-
-  fork() {
-    return new Scope(this);
-  }
-
-  // onPop: () => void = () => {};
 }

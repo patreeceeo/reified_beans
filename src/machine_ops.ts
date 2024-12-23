@@ -1,34 +1,38 @@
 import {invariant, raise} from "./Error";
 import {isPrimative} from "./js";
 import {MachineStackItem} from "./machine_stack_item";
-import {Stack as StackGeneric} from "./generics";
+import {Stack as StackGeneric, type ReadonlyDict} from "./generics";
+import {getBoxedValue, type BoxedValue} from "./boxed_value";
+import {Nil} from "./nil";
+import {theProcClass, type ClassDefinition} from "./class_definitions";
+import type {ClassValue} from "./class_value";
 
 type Stack = StackGeneric<MachineStackItem>;
 
 export abstract class MachineOp {
-  abstract doIt(stack: Stack): void;
+  abstract doIt(stack: Stack, addressBook: ReadonlyDict<VirtualMachineAddress>): void;
   abstract toString(): string;
 }
 
 class PushState extends MachineOp {
-  constructor(
-    readonly address: VirtualMachineAddress,
-    readonly isClosure = false
-  ) {
-    super();
-  }
-  doIt(stack: Stack) {
-    const {isClosure} = this;
-    if(isClosure) {
-      const parentState = stack.peek();
-      invariant(parentState !== undefined, "Closure must have a parent state");
-      stack.push(new MachineStackItem(parentState, this.address));
-    } else {
-      stack.push(new MachineStackItem(undefined, this.address));
+  doIt(stack: Stack, addressBook: ReadonlyDict<VirtualMachineAddress>) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    const proc = state.args.shift();
+    invariant(proc !== undefined && proc.instanceOf("Proc"), "Expected proc");
+    const procId = proc.valueOf();
+    invariant(procId in addressBook, `No address for proc ${proc.valueOf()}`);
+    const address = addressBook[procId];
+    const parentState = stack.peek();
+    invariant(parentState !== undefined, "Closure must have a parent state");
+    const newState = new MachineStackItem(address.valueOf(), parentState)
+    while(state.args.length > 0) {
+      newState.args.push(state.args.shift()!);
     }
+    stack.push(newState);
   }
   toString() {
-    return `PushState(${this.address}, ${this.isClosure})`;
+    return `PushState`;
   }
 }
 
@@ -42,7 +46,7 @@ class PopState extends MachineOp {
     const nextState = stack.peek();
     invariant(nextState !== undefined, "Stack underflow");
     invariant(nextState.args.length === 0, "Next state already has arguments");
-    nextState.args.push(returnValue);
+    nextState.args.push(returnValue ?? getBoxedValue(Nil));
   }
   toString() {
     return "PopState";
@@ -50,10 +54,13 @@ class PopState extends MachineOp {
 }
 
 class PushArg extends MachineOp {
+  arg: BoxedValue;
   constructor(
-    readonly arg: any
+    arg: any,
+    type?: ClassDefinition
   ) {
     super();
+    this.arg = getBoxedValue(arg, type);
   }
   doIt(stack: Stack) {
     const state = stack.peek();
@@ -67,7 +74,6 @@ class PushArg extends MachineOp {
 
 class DiscardArg extends MachineOp {
   constructor(
-    readonly arg: any
   ) {
     super();
   }
@@ -78,7 +84,7 @@ class DiscardArg extends MachineOp {
     state.args.shift();
   }
   toString() {
-    return `DiscardArg(${this.arg})`;
+    return `DiscardArg`;
   }
 }
 
@@ -115,7 +121,8 @@ class Basic extends MachineOp {
   }
 
   getArg(state: MachineStackItem) {
-    const arg = state.args.shift();
+    invariant(state.args.length > 0, "No arguments");
+    const arg = state.args.shift()!.valueOf();
     invariant(isPrimative(arg), "Expected primative");
     return JSON.stringify(arg);
   }
@@ -124,7 +131,7 @@ class Basic extends MachineOp {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const {arity, op} = this;
-    let result: any;
+    let result: number | boolean;
     if(arity === 1) {
       result = eval(`${op}${this.getArg(state)};`);
     } else if (arity === 2) {
@@ -134,21 +141,95 @@ class Basic extends MachineOp {
     } else {
       raise("Invalid arity");
     }
-    state.args.push(result);
+    state.args.push(getBoxedValue(result));
   }
   toString() {
     return `Basic(${this.op}, ${this.arity})`;
   }
 }
 
+class PushReceiver extends MachineOp {
+  doIt(stack: Stack) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    invariant(state.args.length > 0, "No arguments to push");
+    state.receivers.push(state.args.shift()!);
+  }
+
+  toString() {
+    return "PushReceiver";
+  }
+}
+
+class PopReceiver extends MachineOp {
+  doIt(stack: Stack) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    const {receivers} = state;
+    invariant(receivers.length > 0, "No receivers to pop");
+    receivers.pop();
+  }
+
+  toString() {
+    return "PopReceiver";
+  }
+}
+
+class LookupMethodOnReceiver extends MachineOp {
+  constructor(
+    readonly methodName: string
+  ) {
+    super();
+  }
+
+  doIt(stack: Stack) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    const receiver = state.receivers.peek();
+    invariant(receiver !== undefined, "No receiver");
+    const {classDefinition} = receiver;
+    const classBoxedValue = state.get(classDefinition.className);
+    invariant(classBoxedValue !== undefined, `${classDefinition.className} is not in scope`);
+    const classValue = classBoxedValue.valueOf() as ClassValue;
+    const procId = classValue.methodProcIdByName[this.methodName]
+    invariant(procId !== undefined, `No method ${this.methodName} on ${classDefinition.className}`);
+    state.args.rudelyUnshift(getBoxedValue(classValue.methodProcIdByName[this.methodName], theProcClass));
+  }
+
+  toString() {
+    return `LookupMethod(${this.methodName})`;
+  }
+}
+
+class AddToScope extends MachineOp {
+  constructor(
+    readonly key: string,
+    readonly value: BoxedValue
+  ) {
+    super();
+  }
+  doIt(stack: Stack) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    state.set(this.key, this.value);
+  }
+  toString() {
+    return `AddToScope(${this.key}, ${this.value})`;
+  }
+}
+
 const MachineOps = {
+  Basic,
   PushState,
   PopState,
   PushArg,
   DiscardArg,
   ClearArgs,
+  PushReceiver,
+  PopReceiver,
+  LookupMethodOnReceiver,
+  AddToScope,
   Halt,
-  Basic,
 };
 
 export function newMachineOp<OpName extends keyof typeof MachineOps>(opName: OpName, ...args: ConstructorParameters<typeof MachineOps[OpName]>) {

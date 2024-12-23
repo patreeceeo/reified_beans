@@ -4,9 +4,6 @@
 
 import * as Blockly from 'blockly/core';
 
-/** A dictionary of the block definitions provided by this module. */
-export const blocks: {[key: string]: BlockDefinition} = {};
-
 /** Type of a block using the PROCEDURE_DEF_COMMON mixin. */
 type FunctionBlock = Blockly.Block & FunctionMixin;
 interface FunctionMixin extends FunctionMixinType {
@@ -387,7 +384,7 @@ const FUNCTION_DEF_COMMON = {
   },
 };
 
-blocks['procedures_defreturn'] = {
+const procedures_defreturn: BlockDefinition = {
   ...FUNCTION_DEF_COMMON,
   /**
    * Block for defining a procedure with a return value.
@@ -449,7 +446,6 @@ const PROCEDURES_MUTATORCONTAINER = {
     this.contextMenu = false;
   },
 };
-blocks['procedures_mutatorcontainer'] = PROCEDURES_MUTATORCONTAINER;
 
 /** Type of a procedures_mutatorarg block. */
 type ArgumentBlock = Blockly.Block & ArgumentMixin;
@@ -581,7 +577,6 @@ const PROCEDURES_MUTATORARGUMENT = {
     }
   },
 };
-blocks['procedures_mutatorarg'] = PROCEDURES_MUTATORARGUMENT;
 
 /** Type of a block using the PROCEDURE_CALL_COMMON mixin. */
 type CallBlock = Blockly.Block & CallMixin;
@@ -1020,24 +1015,6 @@ const PROCEDURE_CALL_COMMON = {
   },
 };
 
-blocks['procedures_callreturn'] = {
-  ...PROCEDURE_CALL_COMMON,
-  /**
-   * Block for calling a procedure with a return value.
-   */
-  init: function (this: CallBlock) {
-    this.appendDummyInput('TOPROW').appendField('', 'NAME');
-    this.setOutput(true);
-    this.setStyle('procedure_blocks');
-    // Tooltip is set in renameProcedure.
-    this.setHelpUrl(Blockly.Msg['PROCEDURES_CALLRETURN_HELPURL']);
-    this.arguments_ = [];
-    this.argumentVarModels_ = [];
-    this.quarkConnections_ = {};
-    this.quarkIds_ = null;
-  },
-
-  defType_: 'procedures_defreturn',
-};
-
-
+export default {
+  procedures_defreturn,
+}
