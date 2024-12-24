@@ -2,12 +2,12 @@ import type {MachineOp} from "./machine_ops";
 import {MachineStackItem} from "./machine_stack_item";
 import {Dict, Stack, type ReadonlyDict} from "./generics";
 import {invariant} from "./Error";
-import {Nil} from "./nil";
+import {NilValue} from "./nil_value";
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
 
 export class Machine {
   stack = Stack<MachineStackItem>();
-  result: BoxedValue = getBoxedValue(Nil);
+  result: BoxedValue = getBoxedValue(NilValue);
   constructor(
     readonly ops = [] as ReadonlyArray<MachineOp>,
     readonly addressBook: ReadonlyDict<VirtualMachineAddress> = Dict<VirtualMachineAddress>()
@@ -29,7 +29,7 @@ export class Machine {
       state = this.stack.peek()!;
     } while(!state.halted);
 
-    return this.result = state.args.shift() ?? getBoxedValue(Nil);
+    return this.result = state.args.shift() ?? getBoxedValue(NilValue);
   }
 
   reset() {

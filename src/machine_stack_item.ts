@@ -1,10 +1,10 @@
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
 import {Queue} from "./generics";
-import {Nil} from "./nil";
+import {NilValue} from "./nil_value";
 import {Scope} from "./scope";
 
 export class MachineStackItem extends Scope {
-  thisContext = getBoxedValue(Nil);
+  thisContext = getBoxedValue(NilValue);
   constructor(
     public pc: VirtualMachineAddress = 0,
     readonly parent: MachineStackItem | null = null,

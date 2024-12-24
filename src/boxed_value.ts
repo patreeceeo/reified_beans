@@ -1,5 +1,5 @@
 import {theFalseClass, theNilClass, theNumberClass, theTrueClass, type ClassDefinition} from "./class_definitions";
-import {Nil} from "./nil";
+import {NilValue} from "./nil_value";
 
 class BoxedValueClass {
   constructor(private value: any, readonly classDefinition = BoxedValueClass.getClassDefinition(value)) {
@@ -17,7 +17,7 @@ class BoxedValueClass {
         return theFalseClass;
       }
     } else {
-      if(value !== Nil) {
+      if(value !== NilValue) {
         console.warn("Unknown type", typeofValue);
       }
       return theNilClass;

@@ -3,7 +3,7 @@ import {isPrimative} from "./js";
 import {MachineStackItem} from "./machine_stack_item";
 import {Stack as StackGeneric, type ReadonlyDict} from "./generics";
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import {Nil} from "./nil";
+import {NilValue} from "./nil_value";
 import {theProcClass, type ClassDefinition} from "./class_definitions";
 import type {ClassValue} from "./class_value";
 
@@ -46,7 +46,7 @@ class PopState extends MachineOp {
     const nextState = stack.peek();
     invariant(nextState !== undefined, "Stack underflow");
     invariant(nextState.args.length === 0, "Next state already has arguments");
-    nextState.args.push(returnValue ?? getBoxedValue(Nil));
+    nextState.args.push(returnValue ?? getBoxedValue(NilValue));
   }
   toString() {
     return "PopState";

@@ -1,5 +1,5 @@
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import { Nil } from "./nil";
+import { NilValue } from "./nil_value";
 
 /**
 * A tree structure that represents a scope in a running program. Each scope has a parent scope, which is the scope that encloses it. The root scope has no parent.
@@ -16,7 +16,7 @@ export class Scope {
   constructor(readonly parent: Scope | null = null) {
   }
 
-  get(key: string, defaultValue = getBoxedValue(Nil)): BoxedValue {
+  get(key: string, defaultValue = getBoxedValue(NilValue)): BoxedValue {
     return this.items[key] ?? this.parent?.get(key) ?? defaultValue;
   }
 
@@ -26,7 +26,7 @@ export class Scope {
     while (scope.parent && !(key in scope.items)) {
       scope = scope.parent;
     }
-    scope.items[key] = value ?? Nil;
+    scope.items[key] = value ?? NilValue;
     return value;
   }
 
