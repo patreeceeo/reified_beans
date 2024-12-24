@@ -148,34 +148,7 @@ class Basic extends MachineOp {
   }
 }
 
-class PushReceiver extends MachineOp {
-  doIt(stack: Stack) {
-    const state = stack.peek();
-    invariant(state !== undefined, "Machine stack is empty");
-    invariant(state.args.length > 0, "No arguments to push");
-    state.receivers.push(state.args.shift()!);
-  }
-
-  toString() {
-    return "PushReceiver";
-  }
-}
-
-class PopReceiver extends MachineOp {
-  doIt(stack: Stack) {
-    const state = stack.peek();
-    invariant(state !== undefined, "Machine stack is empty");
-    const {receivers} = state;
-    invariant(receivers.length > 0, "No receivers to pop");
-    receivers.pop();
-  }
-
-  toString() {
-    return "PopReceiver";
-  }
-}
-
-class LookupMethodOnReceiver extends MachineOp {
+class LookupMethod extends MachineOp {
   constructor(
     readonly methodName: string
   ) {
@@ -185,7 +158,7 @@ class LookupMethodOnReceiver extends MachineOp {
   doIt(stack: Stack) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    const receiver = state.receivers.peek();
+    const receiver = state.args.shift();
     invariant(receiver !== undefined, "No receiver");
     const {classDefinition} = receiver;
     const classBoxedValue = state.get(classDefinition.className);
@@ -193,7 +166,7 @@ class LookupMethodOnReceiver extends MachineOp {
     const classValue = classBoxedValue.valueOf() as ClassValue;
     const procId = classValue.methodProcIdByName[this.methodName]
     invariant(procId !== undefined, `No method ${this.methodName} on ${classDefinition.className}`);
-    state.args.rudelyUnshift(getBoxedValue(classValue.methodProcIdByName[this.methodName], theProcClass));
+    state.args.push(getBoxedValue(classValue.methodProcIdByName[this.methodName], theProcClass));
   }
 
   toString() {
@@ -225,9 +198,7 @@ const MachineOps = {
   PushArg,
   DiscardArg,
   ClearArgs,
-  PushReceiver,
-  PopReceiver,
-  LookupMethodOnReceiver,
+  LookupMethod,
   AddToScope,
   Halt,
 };

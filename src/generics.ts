@@ -10,11 +10,10 @@ export function Stack<T>(...stack: T[]) {
   return stack as unknown as Stack<T>;
 }
 
-export type Queue<T> = Pick<Array<T>, "push" | "shift" | "length"> & { "verifyIntegrity": () => void, "rudelyUnshift": (item: T) => void };
+export type Queue<T> = Pick<Array<T>, "push" | "shift" | "length"> & { "verifyIntegrity": () => void };
 
 export function Queue<T>(...queue: T[]) {
   (queue as any).verifyIntegrity = verifyIntegrity;
-  (queue as any).rudelyUnshift = queue.unshift;
   return queue as unknown as Queue<T>;
 }
 

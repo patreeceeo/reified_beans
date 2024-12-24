@@ -57,26 +57,30 @@ export const boolean_messages_ifTrue_ifFalse: BlockCompiler = (block, compiler) 
 
   const methodNameParts = [];
 
-  // the next arg, which should be a boolean, is the receiver of the message
-  compiler.addOpsToCurrentProc(newMachineOp("PushReceiver"));
+  if(ifTrue) {
+    methodNameParts.push("ifTrue");
+  }
+
+  if(ifFalse) {
+    methodNameParts.push("ifFalse");
+  }
+
+  compiler.addOpsToCurrentProc(
+    // the receiver (next arg) should be a boolean, look up the method on it
+    newMachineOp("LookupMethod", methodNameParts.join("_")),
+  )
 
   if(ifTrue) {
     // this block should be an expression that evaluates to a proc
     compiler.compileBlock(ifTrue);
-    methodNameParts.push("ifTrue");
   }
 
   if(ifFalse) {
     // this block should be an expression that evaluates to a proc
     compiler.compileBlock(ifFalse);
-    methodNameParts.push("ifFalse");
   }
 
   compiler.addOpsToCurrentProc(
-    // the receiver should be a boolean, look up the method on it
-    newMachineOp("LookupMethodOnReceiver", methodNameParts.join("_")),
-    // the receiver has done its job, discard it
-    newMachineOp("PopReceiver"),
     // the lookup method op will have unshifted the method's proc id into the args
     // push state to shift the proc from args and call it
     newMachineOp("PushState"),
