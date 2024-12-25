@@ -88,10 +88,10 @@ export const boolean_messages_ifTrue_ifFalse: BlockCompiler = (block, compiler) 
 }
 
 export const procedures_defreturn: BlockCompiler = (block, compiler) => {
-  const procId = compiler.newProc();
+  const proc = compiler.newProc();
   const stack = block.getInputTargetBlock('STACK');
   if(stack) {
-    compiler.pushProc(procId);
+    compiler.pushProc(proc.id);
     compiler.compileBlock(stack);
     compiler.addOpsToCurrentProc(
       newMachineOp(
@@ -103,7 +103,7 @@ export const procedures_defreturn: BlockCompiler = (block, compiler) => {
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "PushArg",
-      procId,
+      proc,
       theProcClass
     )
   )

@@ -1,34 +1,34 @@
 import {invariant, raise} from "./Error";
 import {isPrimative} from "./js";
 import {MachineStackItem} from "./machine_stack_item";
-import {Stack as StackGeneric, type ReadonlyDict} from "./generics";
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
 import {NilValue} from "./nil_value";
 import {theProcClass, type ClassDefinition} from "./class_definitions";
 import type {ClassValue} from "./class_value";
-
-type Stack = StackGeneric<MachineStackItem>;
+import type {Machine} from "./machine";
+import type {ProcValue} from "./proc_value";
 
 export abstract class MachineOp {
-  abstract doIt(stack: Stack, addressBook: ReadonlyDict<VirtualMachineAddress>): void;
+  abstract doIt(machine: Machine): void;
   abstract toString(): string;
 }
 
 class PushState extends MachineOp {
-  doIt(stack: Stack, addressBook: ReadonlyDict<VirtualMachineAddress>) {
+  doIt({stack, stateByProcId}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    const proc = state.args.shift();
-    invariant(proc !== undefined && proc.instanceOf("Proc"), "Expected proc");
-    const procId = proc.valueOf();
-    invariant(procId in addressBook, `No address for proc ${proc.valueOf()}`);
-    const address = addressBook[procId];
-    const parentState = stack.peek();
-    invariant(parentState !== undefined, "Closure must have a parent state");
-    const newState = new MachineStackItem(address.valueOf(), parentState)
+    const boxedProc = state.args.shift();
+    invariant(boxedProc !== undefined && boxedProc.instanceOf("Proc"), "Expected proc");
+    const proc = boxedProc.valueOf() as ProcValue;
+    invariant(proc.lexicalParentScopeProcId !== undefined, "Proc must have a lexical scope");
+    const lexicalScopeState = stateByProcId[proc.lexicalParentScopeProcId];
+    invariant(lexicalScopeState !== undefined, "Proc must have a lexical scope");
+    const newState = new MachineStackItem(proc.address, lexicalScopeState)
+    // TODO because of things like this, maybe args shouldn't be a stack item property?
     while(state.args.length > 0) {
       newState.args.push(state.args.shift()!);
     }
+    stateByProcId[boxedProc.valueOf().id] = newState;
     stack.push(newState);
   }
   toString() {
@@ -38,7 +38,7 @@ class PushState extends MachineOp {
 
 /** Pops the current state from the stack and also handles the return value. */
 class PopState extends MachineOp {
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     const poppedState = stack.pop();
     invariant(poppedState !== undefined, "Stack underflow");
     invariant(poppedState.args.length > 0, "No return value");
@@ -62,7 +62,7 @@ class PushArg extends MachineOp {
     super();
     this.arg = getBoxedValue(arg, type);
   }
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     state.args.push(this.arg);
@@ -77,7 +77,7 @@ class DiscardArg extends MachineOp {
   ) {
     super();
   }
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     invariant(state.args.length > 0, "No arguments to shift");
@@ -89,7 +89,7 @@ class DiscardArg extends MachineOp {
 }
 
 class ClearArgs extends MachineOp {
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     state.args.length = 0;
@@ -101,7 +101,7 @@ class ClearArgs extends MachineOp {
 }
 
 class Halt extends MachineOp {
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     invariant(stack.length === 1, "Tried to halt with more than one state on the stack");
     const state = stack.peek()!;
     state.halted = true;
@@ -127,7 +127,7 @@ class Basic extends MachineOp {
     return JSON.stringify(arg);
   }
 
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const {arity, op} = this;
@@ -155,7 +155,7 @@ class LookupMethod extends MachineOp {
     super();
   }
 
-  doIt(stack: Stack) {
+  doIt({stack, procById}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const receiver = state.args.shift();
@@ -166,7 +166,9 @@ class LookupMethod extends MachineOp {
     const classValue = classBoxedValue.valueOf() as ClassValue;
     const procId = classValue.methodProcIdByName[this.methodName]
     invariant(procId !== undefined, `No method ${this.methodName} on ${classDefinition.className}`);
-    state.args.push(getBoxedValue(classValue.methodProcIdByName[this.methodName], theProcClass));
+    const proc = procById[procId];
+    invariant(proc !== undefined, `No proc with id ${procId}`);
+    state.args.push(getBoxedValue(proc, theProcClass));
   }
 
   toString() {
@@ -181,7 +183,7 @@ class AddToScope extends MachineOp {
   ) {
     super();
   }
-  doIt(stack: Stack) {
+  doIt({stack}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     state.set(this.key, this.value);

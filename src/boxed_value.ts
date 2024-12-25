@@ -8,6 +8,7 @@ class BoxedValueClass {
 
   static getClassDefinition(value: any): ClassDefinition {
     const typeofValue = typeof value;
+    // TODO remove some branches by precomputing boxed values for true, false, nil and storing them in the map
     if(typeofValue === "number") {
       return theNumberClass;
     } else if(typeofValue === "boolean") {
@@ -41,6 +42,7 @@ export type BoxedValue = BoxedValueClass;
 
 const map = new Map<any, BoxedValueClass>();
 
+// TODO allow TSC to check the type of value by using type parameters
 export function getBoxedValue(value: any, type = BoxedValueClass.getClassDefinition(value)) {
   return map.get(value) ?? new BoxedValueClass(value, type);
 }
