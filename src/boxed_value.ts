@@ -1,28 +1,9 @@
 import {theFalseClass, theNilClass, theNumberClass, theTrueClass, type ClassDefinition} from "./class_definitions";
-import {NilValue} from "./nil_value";
+import {nilValue} from "./nil_value";
 
-class BoxedValueClass {
-  constructor(private value: any, readonly classDefinition = BoxedValueClass.getClassDefinition(value)) {
+class BoxedValueClass<T> {
+  constructor(private value: T, readonly classDefinition: ClassDefinition<T>) {
     map.set(value, this);
-  }
-
-  static getClassDefinition<T>(value: T): ClassDefinition<T> {
-    const typeofValue = typeof value;
-    // TODO remove some branches by precomputing boxed values for true, false, nil and storing them in the map
-    if(typeofValue === "number") {
-      return theNumberClass as ClassDefinition<T>;
-    } else if(typeofValue === "boolean") {
-      if(value) {
-        return theTrueClass as ClassDefinition<T>;
-      } else {
-        return theFalseClass as ClassDefinition<T>;
-      }
-    } else {
-      if(value !== NilValue) {
-        console.warn("Unknown type", typeofValue);
-      }
-      return theNilClass as ClassDefinition<T>;
-    }
   }
 
   valueOf() {
@@ -38,10 +19,23 @@ class BoxedValueClass {
   }
 }
 
-export type BoxedValue = BoxedValueClass;
+export type BoxedValue<T> = BoxedValueClass<T>;
 
-const map = new Map<any, BoxedValueClass>();
+const map = new Map<any, BoxedValueClass<unknown>>();
+map.set(nilValue, new BoxedValueClass(nilValue, theNilClass));
+map.set(true, new BoxedValueClass(true, theTrueClass));
+map.set(false, new BoxedValueClass(false, theFalseClass));
 
-export function getBoxedValue<T>(value: T, type = BoxedValueClass.getClassDefinition(value)) {
-  return map.get(value) ?? new BoxedValueClass(value, type);
+export function getBoxedValue<T>(value: T, type?: ClassDefinition<T>): BoxedValue<T> {
+  return map.get(value) as BoxedValue<T> | undefined ?? new BoxedValueClass(value, type ?? inferClassDef(value));
+}
+
+function inferClassDef<T>(value: T): ClassDefinition<T> {
+  const typeofValue = typeof value;
+  if(typeofValue === "number") {
+    return theNumberClass as ClassDefinition<T>;
+  } else {
+    console.warn("Value of unknown type:", value);
+    return theNilClass as ClassDefinition<T>;
+  }
 }

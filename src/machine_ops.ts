@@ -2,9 +2,9 @@ import {invariant, raise} from "./Error";
 import {isPrimative} from "./js";
 import {MachineStackItem} from "./machine_stack_item";
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import {NilValue} from "./nil_value";
+import {nilValue} from "./nil_value";
 import {theProcClass, type ClassDefinition} from "./class_definitions";
-import type {ClassValue} from "./class_value";
+import {ClassValue} from "./class_value";
 import type {Machine} from "./machine";
 import type {ProcValue} from "./proc_value";
 
@@ -46,7 +46,7 @@ class PopState extends MachineOp {
     const nextState = stack.peek();
     invariant(nextState !== undefined, "Stack underflow");
     invariant(nextState.args.length === 0, "Next state already has arguments");
-    nextState.args.push(returnValue ?? getBoxedValue(NilValue));
+    nextState.args.push(returnValue ?? getBoxedValue(nilValue));
   }
   toString() {
     return "PopState";
@@ -54,7 +54,7 @@ class PopState extends MachineOp {
 }
 
 class PushArg<T> extends MachineOp {
-  arg: BoxedValue;
+  arg: BoxedValue<T>;
   constructor(
     arg: T,
     type?: ClassDefinition<T>
@@ -161,7 +161,7 @@ class LookupMethod extends MachineOp {
     const receiver = state.args.shift();
     invariant(receiver !== undefined, "No receiver");
     const {classDefinition} = receiver;
-    const classBoxedValue = state.get(classDefinition.className);
+    const classBoxedValue = state.get<ClassValue>(classDefinition.className);
     invariant(classBoxedValue !== undefined, `${classDefinition.className} is not in scope`);
     const classValue = classBoxedValue.valueOf() as ClassValue;
     const procId = classValue.methodProcIdByName[this.methodName]
@@ -176,10 +176,10 @@ class LookupMethod extends MachineOp {
   }
 }
 
-class AddToScope extends MachineOp {
+class AddToScope<T> extends MachineOp {
   constructor(
     readonly key: string,
-    readonly value: BoxedValue
+    readonly value: BoxedValue<T>
   ) {
     super();
   }

@@ -1,5 +1,5 @@
 import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import { NilValue } from "./nil_value";
+import { nilValue, type NilValue } from "./nil_value";
 
 /**
 * A tree structure that represents a scope in a running program. Each scope has a parent scope, which is the scope that encloses it. The root scope has no parent.
@@ -11,22 +11,22 @@ import { NilValue } from "./nil_value";
 * - Use a specialized class for non-nested scopes or vice-versa?
 */
 export class Scope {
-  private items: { [key: string]: BoxedValue } = Object.create(null);
+  private items: { [key: string]: BoxedValue<unknown> } = Object.create(null);
 
   constructor(readonly parent: Scope | null = null) {
   }
 
-  get(key: string, defaultValue = getBoxedValue(NilValue)): BoxedValue {
-    return this.items[key] ?? this.parent?.get(key) ?? defaultValue;
+  get<T = NilValue>(key: string, defaultValue = getBoxedValue(nilValue)): BoxedValue<T> {
+    return this.items[key] as BoxedValue<T> ?? this.parent?.get(key) ?? defaultValue;
   }
 
-  set(key: string, value: BoxedValue): BoxedValue {
+  set<T>(key: string, value: BoxedValue<T>): BoxedValue<T> {
     // Find the scope where the variable is defined
     let scope: Scope = this;
     while (scope.parent && !(key in scope.items)) {
       scope = scope.parent;
     }
-    scope.items[key] = value ?? NilValue;
+    scope.items[key] = value ?? nilValue;
     return value;
   }
 
