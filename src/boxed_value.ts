@@ -42,7 +42,6 @@ export type BoxedValue = BoxedValueClass;
 
 const map = new Map<any, BoxedValueClass>();
 
-// TODO allow TSC to check the type of value by using type parameters
 export function getBoxedValue<T>(value: T, type = BoxedValueClass.getClassDefinition(value)) {
   return map.get(value) ?? new BoxedValueClass(value, type);
 }
