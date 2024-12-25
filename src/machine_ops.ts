@@ -53,11 +53,11 @@ class PopState extends MachineOp {
   }
 }
 
-class PushArg extends MachineOp {
+class PushArg<T> extends MachineOp {
   arg: BoxedValue;
   constructor(
-    arg: any,
-    type?: ClassDefinition
+    arg: T,
+    type?: ClassDefinition<T>
   ) {
     super();
     this.arg = getBoxedValue(arg, type);

@@ -6,22 +6,22 @@ class BoxedValueClass {
     map.set(value, this);
   }
 
-  static getClassDefinition(value: any): ClassDefinition {
+  static getClassDefinition<T>(value: T): ClassDefinition<T> {
     const typeofValue = typeof value;
     // TODO remove some branches by precomputing boxed values for true, false, nil and storing them in the map
     if(typeofValue === "number") {
-      return theNumberClass;
+      return theNumberClass as ClassDefinition<T>;
     } else if(typeofValue === "boolean") {
       if(value) {
-        return theTrueClass;
+        return theTrueClass as ClassDefinition<T>;
       } else {
-        return theFalseClass;
+        return theFalseClass as ClassDefinition<T>;
       }
     } else {
       if(value !== NilValue) {
         console.warn("Unknown type", typeofValue);
       }
-      return theNilClass;
+      return theNilClass as ClassDefinition<T>;
     }
   }
 
@@ -43,6 +43,6 @@ export type BoxedValue = BoxedValueClass;
 const map = new Map<any, BoxedValueClass>();
 
 // TODO allow TSC to check the type of value by using type parameters
-export function getBoxedValue(value: any, type = BoxedValueClass.getClassDefinition(value)) {
+export function getBoxedValue<T>(value: T, type = BoxedValueClass.getClassDefinition(value)) {
   return map.get(value) ?? new BoxedValueClass(value, type);
 }

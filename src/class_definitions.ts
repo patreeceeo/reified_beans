@@ -12,13 +12,13 @@ import {type ReadonlyDict} from "./generics";
 import {type MachineOp} from "./machine_ops";
 import type {ProcValue} from "./proc_value";
 
-export abstract class ClassDefinition {
+export abstract class ClassDefinition<T> {
   abstract className: string;
-  abstract stringifyValue(value: any): string
+  abstract stringifyValue(value: T): string
   abstract methodOpsByName: ReadonlyDict<ReadonlyArray<MachineOp>>;
 }
 
-export const theNumberClass = new class extends ClassDefinition {
+export const theNumberClass = new class extends ClassDefinition<number> {
   className = "Number";
 
   methodOpsByName = {};
@@ -26,9 +26,9 @@ export const theNumberClass = new class extends ClassDefinition {
   stringifyValue(value: number) {
     return String(value);
   }
-}
+} as ClassDefinition<number>;
 
-export const theTrueClass = new class extends ClassDefinition {
+export const theTrueClass = new class extends ClassDefinition<true> {
   className = "True";
 
   methodOpsByName = {
@@ -37,10 +37,9 @@ export const theTrueClass = new class extends ClassDefinition {
   stringifyValue() {
     return "true";
   }
+} as ClassDefinition<true>;
 
-}
-
-export const theFalseClass = new class extends ClassDefinition {
+export const theFalseClass = new class extends ClassDefinition<false> {
   className = "False";
 
   stringifyValue() {
@@ -49,9 +48,9 @@ export const theFalseClass = new class extends ClassDefinition {
 
   methodOpsByName = {
   }
-}
+} as ClassDefinition<false>;
 
-export const theNilClass = new class extends ClassDefinition {
+export const theNilClass = new class extends ClassDefinition<undefined> {
   className = "Nil";
 
   methodOpsByName = {};
@@ -59,9 +58,9 @@ export const theNilClass = new class extends ClassDefinition {
   stringifyValue() {
     return "nil";
   }
-}
+} as ClassDefinition<undefined>;
 
-export const theProcClass = new class extends ClassDefinition {
+export const theProcClass = new class extends ClassDefinition<Readonly<ProcValue>> {
   className = "Proc";
 
   methodOpsByName = {};
@@ -69,9 +68,9 @@ export const theProcClass = new class extends ClassDefinition {
   stringifyValue(value: Readonly<ProcValue>) {
     return value.toString();
   }
-}
+} as ClassDefinition<Readonly<ProcValue>>;
 
-export const theClassClass = new class extends ClassDefinition {
+export const theClassClass = new class extends ClassDefinition<Readonly<ClassValue>> {
   className = "Class";
 
   methodOpsByName = {};
@@ -79,4 +78,4 @@ export const theClassClass = new class extends ClassDefinition {
   stringifyValue(value: Readonly<ClassValue>) {
     return value.toString();
   }
-}
+} as ClassDefinition<Readonly<ClassValue>>;

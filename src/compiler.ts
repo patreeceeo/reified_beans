@@ -133,7 +133,7 @@ export class Compiler {
 
   /** Add the class def's methods to new procs and also instruct the machine to
   * add the class value to its scope */
-  processClass(classDef: ClassDefinition) {
+  processClass(classDef: ClassDefinition<unknown>) {
     const procIds = {} as Record<string, ProcId>;
     for(const [methodName, methodOps] of Object.entries(classDef.methodOpsByName)) {
       const proc = this.addOpsToNewProc(methodOps);
