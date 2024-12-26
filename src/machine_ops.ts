@@ -14,20 +14,16 @@ export abstract class MachineOp {
 }
 
 class PushState extends MachineOp {
-  doIt({stack, stateByProcId}: Machine) {
+  doIt({stack, stateByProcId, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    const boxedProc = state.args.shift();
+    const boxedProc = argsQueue.shift();
     invariant(boxedProc !== undefined && boxedProc.instanceOf("Proc"), "Expected proc");
     const proc = boxedProc.valueOf() as ProcValue;
     invariant(proc.lexicalParentScopeProcId !== undefined, "Proc must have a lexical scope");
     const lexicalScopeState = stateByProcId[proc.lexicalParentScopeProcId];
     invariant(lexicalScopeState !== undefined, "Proc must have a lexical scope");
     const newState = new MachineStackItem(proc.address, lexicalScopeState)
-    // TODO because of things like this, maybe args shouldn't be a stack item property?
-    while(state.args.length > 0) {
-      newState.args.push(state.args.shift()!);
-    }
     stateByProcId[boxedProc.valueOf().id] = newState;
     stack.push(newState);
   }
@@ -38,15 +34,15 @@ class PushState extends MachineOp {
 
 /** Pops the current state from the stack and also handles the return value. */
 class PopState extends MachineOp {
-  doIt({stack}: Machine) {
+  doIt({stack, argsQueue}: Machine) {
     const poppedState = stack.pop();
     invariant(poppedState !== undefined, "Stack underflow");
-    invariant(poppedState.args.length > 0, "No return value");
-    const returnValue = poppedState.args.shift();
+    invariant(argsQueue.length > 0, "No return value");
+    const returnValue = argsQueue.shift();
     const nextState = stack.peek();
     invariant(nextState !== undefined, "Stack underflow");
-    invariant(nextState.args.length === 0, "Next state already has arguments");
-    nextState.args.push(returnValue ?? getBoxedValue(nilValue));
+    invariant(argsQueue.length === 0, "Next state already has arguments");
+    argsQueue.push(returnValue ?? getBoxedValue(nilValue));
   }
   toString() {
     return "PopState";
@@ -62,10 +58,10 @@ class PushArg<T> extends MachineOp {
     super();
     this.arg = getBoxedValue(arg, type);
   }
-  doIt({stack}: Machine) {
+  doIt({stack, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    state.args.push(this.arg);
+    argsQueue.push(this.arg);
   }
   toString() {
     return `PushArg(${this.arg})`;
@@ -77,11 +73,11 @@ class DiscardArg extends MachineOp {
   ) {
     super();
   }
-  doIt({stack}: Machine) {
+  doIt({stack, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    invariant(state.args.length > 0, "No arguments to shift");
-    state.args.shift();
+    invariant(argsQueue.length > 0, "No arguments to shift");
+    argsQueue.shift();
   }
   toString() {
     return `DiscardArg`;
@@ -89,10 +85,10 @@ class DiscardArg extends MachineOp {
 }
 
 class ClearArgs extends MachineOp {
-  doIt({stack}: Machine) {
+  doIt({stack, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    state.args.length = 0;
+    argsQueue.length = 0;
   }
 
   toString() {
@@ -120,28 +116,28 @@ class Basic extends MachineOp {
     super();
   }
 
-  getArg(state: MachineStackItem) {
-    invariant(state.args.length > 0, "No arguments");
-    const arg = state.args.shift()!.valueOf();
+  getArg(argsQueue: Machine["argsQueue"]) {
+    invariant(argsQueue.length > 0, "No arguments");
+    const arg = argsQueue.shift()!.valueOf();
     invariant(isPrimative(arg), "Expected primative");
     return JSON.stringify(arg);
   }
 
-  doIt({stack}: Machine) {
+  doIt({stack, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const {arity, op} = this;
     let result: number | boolean;
     if(arity === 1) {
-      result = eval(`${op}${this.getArg(state)};`);
+      result = eval(`${op}${this.getArg(argsQueue)};`);
     } else if (arity === 2) {
-      const arg1 = this.getArg(state);
-      const arg2 = this.getArg(state);
+      const arg1 = this.getArg(argsQueue);
+      const arg2 = this.getArg(argsQueue);
       result = eval(`${arg1}${op}${arg2};`);
     } else {
       raise("Invalid arity");
     }
-    state.args.push(getBoxedValue(result));
+    argsQueue.push(getBoxedValue(result));
   }
   toString() {
     return `Basic(${this.op}, ${this.arity})`;
@@ -155,10 +151,10 @@ class LookupMethod extends MachineOp {
     super();
   }
 
-  doIt({stack, procById}: Machine) {
+  doIt({stack, procById, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    const receiver = state.args.shift();
+    const receiver = argsQueue.shift();
     invariant(receiver !== undefined, "No receiver");
     const {classDefinition} = receiver;
     const classBoxedValue = state.get<ClassValue>(classDefinition.className);
@@ -168,7 +164,7 @@ class LookupMethod extends MachineOp {
     invariant(procId !== undefined, `No method ${this.methodName} on ${classDefinition.className}`);
     const proc = procById[procId];
     invariant(proc !== undefined, `No proc with id ${procId}`);
-    state.args.push(getBoxedValue(proc, theProcClass));
+    argsQueue.push(getBoxedValue(proc, theProcClass));
   }
 
   toString() {

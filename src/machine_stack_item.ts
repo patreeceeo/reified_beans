@@ -1,5 +1,4 @@
-import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import {Queue} from "./generics";
+import {getBoxedValue} from "./boxed_value";
 import {nilValue} from "./nil_value";
 import {Scope} from "./scope";
 
@@ -11,6 +10,5 @@ export class MachineStackItem extends Scope {
   ) {
     super(parent);
   }
-  args = Queue<BoxedValue<any>>();
   halted = false;
 }
