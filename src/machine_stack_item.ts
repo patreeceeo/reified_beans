@@ -1,5 +1,5 @@
-import {getBoxedValue} from "./boxed_value";
-import {nilValue} from "./nil_value";
+import {getBoxedValue} from "./value_box";
+import {nilValue} from "./values/nil_value";
 import {Scope} from "./scope";
 
 export class MachineStackItem extends Scope {

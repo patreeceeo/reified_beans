@@ -7,11 +7,11 @@ import {MachineOp, newMachineOp} from './machine_ops';
 import * as forBlock from './block_compilers';
 import {invariant} from './Error';
 import {Machine} from './machine';
-import {ClassValue} from './class_value';
-import {getBoxedValue} from './boxed_value';
+import {ClassValue} from './values/class_value';
+import {getBoxedValue} from './value_box';
 import {stdlib, loadStdlib} from './stdlib';
 import {theClassClass, type ClassDefinition} from './class_definitions';
-import {ProcValue, resetProcId, type ProcId} from './proc_value';
+import {ProcValue, resetProcId, type ProcId} from './values/proc_value';
 
 export interface BlockCompiler {
   (block: Blockly.Block, compiler: Compiler): void;
@@ -140,6 +140,6 @@ export class Compiler {
       procIds[methodName] = proc.id;
     }
     const classValue = new ClassValue(procIds);
-    this.addOpsToCurrentProc(newMachineOp("AddToScope", classDef.className, getBoxedValue(classValue, theClassClass)));
+    this.addOpsToCurrentProc(newMachineOp("AddToScope", classDef.className, getBoxedValue(classValue)));
   }
 }

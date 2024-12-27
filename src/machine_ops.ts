@@ -1,12 +1,11 @@
 import {invariant, raise} from "./Error";
 import {isPrimative} from "./js";
 import {MachineStackItem} from "./machine_stack_item";
-import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import {nilValue} from "./nil_value";
-import {theProcClass, type ClassDefinition} from "./class_definitions";
-import {ClassValue} from "./class_value";
+import {getBoxedValue, type ValueBox, type ValueBoxValue} from "./value_box";
+import {nilValue} from "./values/nil_value";
+import {ClassValue} from "./values/class_value";
 import type {Machine} from "./machine";
-import type {ProcValue} from "./proc_value";
+import type {ProcValue} from "./values/proc_value";
 
 export abstract class MachineOp {
   abstract doIt(machine: Machine): void;
@@ -49,14 +48,13 @@ class PopState extends MachineOp {
   }
 }
 
-class PushArg<T> extends MachineOp {
-  arg: BoxedValue<T>;
+class PushArg extends MachineOp {
+  arg: ValueBox<ValueBoxValue>;
   constructor(
-    arg: T,
-    type?: ClassDefinition<T>
+    arg: ValueBoxValue,
   ) {
     super();
-    this.arg = getBoxedValue(arg, type);
+    this.arg = getBoxedValue(arg);
   }
   doIt({stack, argsQueue}: Machine) {
     const state = stack.peek();
@@ -164,7 +162,7 @@ class LookupMethod extends MachineOp {
     invariant(procId !== undefined, `No method ${this.methodName} on ${classDefinition.className}`);
     const proc = procById[procId];
     invariant(proc !== undefined, `No proc with id ${procId}`);
-    argsQueue.push(getBoxedValue(proc, theProcClass));
+    argsQueue.push(getBoxedValue(proc));
   }
 
   toString() {
@@ -172,10 +170,10 @@ class LookupMethod extends MachineOp {
   }
 }
 
-class AddToScope<T> extends MachineOp {
+class AddToScope extends MachineOp {
   constructor(
     readonly key: string,
-    readonly value: BoxedValue<T>
+    readonly value: ValueBox<ValueBoxValue>
   ) {
     super();
   }
@@ -189,8 +187,34 @@ class AddToScope<T> extends MachineOp {
   }
 }
 
+class CallNativeMethod extends MachineOp {
+  constructor(
+    readonly methodName: string,
+  ) {
+    super();
+  }
+
+  doIt({stack, argsQueue}: Machine) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    const boxedReceiver = argsQueue.shift();
+    invariant(boxedReceiver !== undefined, "No receiver");
+    const value = boxedReceiver.valueOf();
+    const method = value[this.methodName];
+    invariant(method !== undefined, `No method ${this.methodName} on ${value}`);
+    const result = method.apply(value, argsQueue);
+    argsQueue.length = 0;
+    argsQueue.push(getBoxedValue(result));
+  }
+
+  toString() {
+    return `CallNativeMethod(${this.methodName})`;
+  }
+}
+
 const MachineOps = {
   Basic,
+  CallNativeMethod,
   PushState,
   PopState,
   PushArg,

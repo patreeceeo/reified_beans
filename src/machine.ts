@@ -2,15 +2,15 @@ import type {MachineOp} from "./machine_ops";
 import {MachineStackItem} from "./machine_stack_item";
 import {Dict, Queue, Stack } from "./generics";
 import {invariant} from "./Error";
-import {nilValue} from "./nil_value";
-import {getBoxedValue, type BoxedValue} from "./boxed_value";
-import type {ProcValue} from "./proc_value";
+import {nilValue} from "./values/nil_value";
+import {getBoxedValue, type ValueBox} from "./value_box";
+import type {ProcValue} from "./values/proc_value";
 
 export class Machine {
   stack = Stack<MachineStackItem>();
   stateByProcId = Dict<MachineStackItem>();
-  result: BoxedValue<any> = getBoxedValue(nilValue);
-  argsQueue = Queue<BoxedValue<any>>();
+  result: ValueBox<any> = getBoxedValue(nilValue);
+  argsQueue = Queue<ValueBox<any>>();
   constructor(
     readonly ops = [] as ReadonlyArray<MachineOp>,
     readonly procById: Dict<Readonly<ProcValue>>
