@@ -5,8 +5,9 @@ import {getBoxedValue, type ValueBox, type ValueBoxValue} from "./value_box";
 import {nilValue} from "./values/nil_value";
 import {ClassValue} from "./values/class_value";
 import type {Machine} from "./machine";
-import type {ProcValue} from "./values/proc_value";
+import type {ProcId, ProcValue} from "./values/proc_value";
 import type {ClassDefinition} from "./class_definitions";
+import type {Dict} from "./generics";
 
 export abstract class MachineOp {
   abstract doIt(machine: Machine): void;
@@ -157,18 +158,23 @@ class LookupMethod extends MachineOp {
     return classDefinition;
   }
 
+  getMethodProcId(receiver: ValueBox<any>, methodName: string, state: MachineStackItem): ProcId {
+    const implementingClass = this.findImplementingClass(receiver, methodName);
+    invariant(implementingClass !== undefined, `No class implements ${methodName}`);
+    const classBoxedValue = state.get<ClassValue<any>>(implementingClass.className);
+    invariant(classBoxedValue !== undefined, `${implementingClass.className} is not in scope`);
+    const classValue = classBoxedValue.valueOf() as ClassValue<any>;
+    const procId = classValue.methodProcIdByName[methodName];
+    invariant(procId !== undefined, `${receiver.classDefinition.className} does not understand "${methodName}"`);
+    return procId;
+  }
+
   doIt({stack, procById, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const receiver = argsQueue.peek();
     invariant(receiver !== undefined, "No receiver");
-    const implementingClass = this.findImplementingClass(receiver, this.methodName);
-    invariant(implementingClass !== undefined, `No class implements ${this.methodName}`);
-    const classBoxedValue = state.get<ClassValue<any>>(implementingClass.className);
-    invariant(classBoxedValue !== undefined, `${implementingClass.className} is not in scope`);
-    const classValue = classBoxedValue.valueOf() as ClassValue<any>;
-    const procId = classValue.methodProcIdByName[this.methodName]
-    invariant(procId !== undefined, `No method ${this.methodName} on ${implementingClass.className}`);
+    const procId = this.getMethodProcId(receiver, this.methodName, state);
     const proc = procById[procId];
     invariant(proc !== undefined, `No proc with id ${procId}`);
     argsQueue.unshift(getBoxedValue(proc));
@@ -266,7 +272,7 @@ const MachineOps = {
   AddToScope,
   GetFromScope,
   Halt,
-  Debug
+  Debug,
 };
 
 export function newMachineOp<OpName extends keyof typeof MachineOps>(opName: OpName, ...args: ConstructorParameters<typeof MachineOps[OpName]>) {
