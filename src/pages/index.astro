@@ -79,9 +79,12 @@ import Split from 'src/layouts/Split.astro';
 
   function useGeneratedCode() {
     const machine = blocklyWorkspace.compileWorkspace();
-    machine.run();
+    try {
+        machine.run();
+    } catch (e) {
+      console.error(e);
+    }
     machineXRay.machine = machine;
     needRender = true;
   }
-
 </script>
