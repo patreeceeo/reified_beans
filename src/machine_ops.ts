@@ -6,6 +6,7 @@ import {nilValue} from "./values/nil_value";
 import {ClassValue} from "./values/class_value";
 import type {Machine} from "./machine";
 import type {ProcValue} from "./values/proc_value";
+import type {ClassDefinition} from "./class_definitions";
 
 export abstract class MachineOp {
   abstract doIt(machine: Machine): void;
@@ -36,12 +37,10 @@ class PopState extends MachineOp {
   doIt({stack, argsQueue}: Machine) {
     const poppedState = stack.pop();
     invariant(poppedState !== undefined, "Stack underflow");
-    invariant(argsQueue.length > 0, "No return value");
-    const returnValue = argsQueue.shift();
+    const returnValue = argsQueue.peek() ?? getBoxedValue(nilValue);
     const nextState = stack.peek();
     invariant(nextState !== undefined, "Stack underflow");
-    invariant(argsQueue.length === 0, "Next state already has arguments");
-    argsQueue.push(returnValue ?? getBoxedValue(nilValue));
+    argsQueue.push(returnValue);
   }
   toString() {
     return "PopState";
@@ -66,7 +65,7 @@ class PushArg extends MachineOp {
   }
 }
 
-class DiscardArg extends MachineOp {
+class ShiftArg extends MachineOp {
   constructor(
   ) {
     super();
@@ -144,25 +143,35 @@ class Basic extends MachineOp {
 
 class LookupMethod extends MachineOp {
   constructor(
-    readonly methodName: string
+    readonly methodName: string,
   ) {
     super();
+  }
+
+  /** Walk up the class heirarchy to find the class which implements the method */
+  findImplementingClass(receiver: ValueBox<any>, methodName: string): ClassDefinition<any> | undefined {
+    let {classDefinition} = receiver;
+    while(classDefinition.superClass !== undefined && !classDefinition.hasMethodImplementation(methodName)) {
+      classDefinition = classDefinition.superClass
+    }
+    return classDefinition;
   }
 
   doIt({stack, procById, argsQueue}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    const receiver = argsQueue.shift();
+    const receiver = argsQueue.peek();
     invariant(receiver !== undefined, "No receiver");
-    const {classDefinition} = receiver;
-    const classBoxedValue = state.get<ClassValue>(classDefinition.className);
-    invariant(classBoxedValue !== undefined, `${classDefinition.className} is not in scope`);
-    const classValue = classBoxedValue.valueOf() as ClassValue;
+    const implementingClass = this.findImplementingClass(receiver, this.methodName);
+    invariant(implementingClass !== undefined, `No class implements ${this.methodName}`);
+    const classBoxedValue = state.get<ClassValue<any>>(implementingClass.className);
+    invariant(classBoxedValue !== undefined, `${implementingClass.className} is not in scope`);
+    const classValue = classBoxedValue.valueOf() as ClassValue<any>;
     const procId = classValue.methodProcIdByName[this.methodName]
-    invariant(procId !== undefined, `No method ${this.methodName} on ${classDefinition.className}`);
+    invariant(procId !== undefined, `No method ${this.methodName} on ${implementingClass.className}`);
     const proc = procById[procId];
     invariant(proc !== undefined, `No proc with id ${procId}`);
-    argsQueue.push(getBoxedValue(proc));
+    argsQueue.unshift(getBoxedValue(proc));
   }
 
   toString() {
@@ -173,56 +182,91 @@ class LookupMethod extends MachineOp {
 class AddToScope extends MachineOp {
   constructor(
     readonly key: string,
-    readonly value: ValueBox<ValueBoxValue>
+    readonly value?: ValueBox<ValueBoxValue>
   ) {
     super();
   }
-  doIt({stack}: Machine) {
+  doIt({stack, argsQueue, onScopeItemSet}: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    state.set(this.key, this.value);
+    const value = this.value ?? argsQueue.peek();
+    invariant(value !== undefined, "No value to add to scope");
+    state.set(this.key, value);
+    onScopeItemSet(state, this.key, value);
   }
   toString() {
-    return `AddToScope(${this.key}, ${this.value})`;
+    return this.value ? `AddToScope(${this.key}, ${this.value})` : `AddToScope(${this.key})`;
   }
 }
 
-class CallNativeMethod extends MachineOp {
+class GetFromScope extends MachineOp {
+  constructor(
+    readonly key: string
+  ) {
+    super();
+  }
+  doIt({stack, argsQueue}: Machine) {
+    const state = stack.peek();
+    invariant(state !== undefined, "Machine stack is empty");
+    const value = state.get(this.key);
+    invariant(value !== undefined, `No value for ${this.key} in scope`);
+    argsQueue.push(value);
+  }
+  toString() {
+    return `GetFromScope(${this.key})`;
+  }
+}
+
+class ReplaceWithNativeMethodAnswer extends MachineOp {
   constructor(
     readonly methodName: string,
+    readonly replaceArg = false
   ) {
     super();
   }
 
   doIt({stack, argsQueue}: Machine) {
+    const {methodName} = this;
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
-    const boxedReceiver = argsQueue.shift();
+    const boxedReceiver = argsQueue.peek();
     invariant(boxedReceiver !== undefined, "No receiver");
     const value = boxedReceiver.valueOf();
-    const method = value[this.methodName];
-    invariant(method !== undefined, `No method ${this.methodName} on ${value}`);
+    invariant(value !== undefined && methodName in value, `native method ${methodName} not defined`)
+    const method = value[methodName] as Function;
+    invariant(method !== undefined, `No method "${methodName}" on ${value}`);
     const result = method.apply(value, argsQueue);
-    argsQueue.length = 0;
-    argsQueue.push(getBoxedValue(result));
+    argsQueue.shift();
+    argsQueue.unshift(getBoxedValue(result));
   }
 
   toString() {
-    return `CallNativeMethod(${this.methodName})`;
+    return `ReplaceWithNativeMethodAnswer(${this.methodName})`;
+  }
+}
+
+class Debug extends MachineOp {
+  doIt(machine: Machine) {
+    debugger;
+  }
+  toString() {
+    return "Debug";
   }
 }
 
 const MachineOps = {
   Basic,
-  CallNativeMethod,
+  ReplaceWithNativeMethodAnswer,
   PushState,
   PopState,
   PushArg,
-  DiscardArg,
+  ShiftArg,
   ClearArgs,
   LookupMethod,
   AddToScope,
+  GetFromScope,
   Halt,
+  Debug
 };
 
 export function newMachineOp<OpName extends keyof typeof MachineOps>(opName: OpName, ...args: ConstructorParameters<typeof MachineOps[OpName]>) {

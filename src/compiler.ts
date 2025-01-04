@@ -10,7 +10,7 @@ import {Machine} from './machine';
 import {ClassValue} from './values/class_value';
 import {getBoxedValue} from './value_box';
 import {stdlib, loadStdlib} from './stdlib';
-import {theClassClass, type ClassDefinition} from './class_definitions';
+import {type ClassDefinition} from './class_definitions';
 import {ProcValue, resetProcId, type ProcId} from './values/proc_value';
 
 export interface BlockCompiler {
@@ -63,7 +63,11 @@ export class Compiler {
       ops.push(...this.opsByProc[procId]);
     }
 
-    return new Machine(ops, this.procById);
+    const machine = new Machine(ops, this.procById);
+    machine.onScopeItemSet = (scope, name, value) => {
+      this.workspace.createVariable(name);
+    }
+    return machine;
   }
 
   compileBlock(block: Blockly.Block) {
@@ -122,11 +126,12 @@ export class Compiler {
     }
   }
 
+  popStateOp = newMachineOp("PopState");
   /** Add ops to a new proc and return the procId */
-  addOpsToNewProc(ops: readonly MachineOp[]) {
+  compileMethod(ops: readonly MachineOp[]) {
     const proc = this.newProc();
     this.pushProc(proc.id);
-    this.addOpsToCurrentProc(...ops);
+    this.addOpsToCurrentProc(...ops, this.popStateOp);
     this.popProc();
     return proc;
   }
@@ -136,10 +141,11 @@ export class Compiler {
   processClass(classDef: ClassDefinition<unknown>) {
     const procIds = {} as Record<string, ProcId>;
     for(const [methodName, methodOps] of Object.entries(classDef.methodOpsByName)) {
-      const proc = this.addOpsToNewProc(methodOps);
+      const proc = this.compileMethod(methodOps);
       procIds[methodName] = proc.id;
     }
-    const classValue = new ClassValue(procIds);
-    this.addOpsToCurrentProc(newMachineOp("AddToScope", classDef.className, getBoxedValue(classValue)));
+    const classValue = new ClassValue(procIds, classDef.instantiate);
+    const classBoxedValue = getBoxedValue(classValue);
+    this.addOpsToCurrentProc(newMachineOp("AddToScope", classDef.className, classBoxedValue));
   }
 }

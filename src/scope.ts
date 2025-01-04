@@ -1,3 +1,5 @@
+import {invariant} from "./Error";
+import {Dict} from "./generics";
 import {getBoxedValue, type ValueBox, type ValueBoxValue} from "./value_box";
 import { nilValue, type NilValue } from "./values/nil_value";
 
@@ -11,7 +13,8 @@ import { nilValue, type NilValue } from "./values/nil_value";
 * - Use a specialized class for non-nested scopes or vice-versa?
 */
 export class Scope {
-  private items: { [key: string]: ValueBox<ValueBoxValue> } = Object.create(null);
+  private items = Dict<ValueBox<any>>();
+  private permissions = Dict<number>();
 
   constructor(readonly parent: Scope | null = null) {
   }
@@ -20,17 +23,27 @@ export class Scope {
     return this.items[key] as ValueBox<T> ?? this.parent?.get(key) ?? defaultValue;
   }
 
-  set<T extends ValueBoxValue>(key: string, value: ValueBox<T>): ValueBox<T> {
+  set<T extends ValueBoxValue>(key: string, value: ValueBox<T>, permission = Scope.ALLOW_WRITE): ValueBox<T> {
     // Find the scope where the variable is defined
     let scope: Scope = this;
     while (scope.parent && !(key in scope.items)) {
       scope = scope.parent;
     }
-    scope.items[key] = value ?? nilValue;
+    return scope.setLocal(key, value, permission);
+  }
+
+  setLocal<T extends ValueBoxValue>(key: string, value: ValueBox<T>, permission = Scope.ALLOW_WRITE): ValueBox<T> {
+    invariant(!(key in this.permissions) || this.permissions[key] & Scope.ALLOW_WRITE, `Cannot write to ${key}`);
+    this.items[key] = value ?? nilValue;
+    this.permissions[key] = permission;
     return value;
   }
 
   has(key: string): boolean {
     return key in this.items || (this.parent?.has(key) ?? false);
   }
+
+  // TODO keep?
+  static ALLOW_READ = 0;
+  static ALLOW_WRITE = 1;
 }

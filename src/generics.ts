@@ -10,9 +10,12 @@ export function Stack<T>(...stack: T[]) {
   return stack as unknown as Stack<T>;
 }
 
-export type Queue<T> = Pick<Array<T>, "push" | "shift" | "length"> & { "verifyIntegrity": () => void };
+export type Queue<T> = Pick<Array<T>, "push" | "shift" | "unshift" | "length"> & { "peek": () => T | undefined, "verifyIntegrity": () => void };
 
 export function Queue<T>(...queue: T[]) {
+  (queue as any).peek = function() {
+    return this.at(0);
+  };
   (queue as any).verifyIntegrity = verifyIntegrity;
   return queue as unknown as Queue<T>;
 }
@@ -24,10 +27,12 @@ function verifyIntegrity<T>(this: T[]): void {
   }
 }
 
+// TODO make dict like that of python? probably still faster than Map?
+export type Dict<T> = Record<string, T>;
+
 export function Dict<T>() {
-  return Object.create(null) as Record<string, T>;
+  return Object.create(null) as Dict<T>;
 }
 
-export type Dict<T> = Record<string, T>;
 
 export type ReadonlyDict<T> = Readonly<Record<string, T>>;

@@ -5,6 +5,7 @@ import {invariant} from "./Error";
 import {nilValue} from "./values/nil_value";
 import {getBoxedValue, type ValueBox} from "./value_box";
 import type {ProcValue} from "./values/proc_value";
+import type {Scope} from "./scope";
 
 export class Machine {
   stack = Stack<MachineStackItem>();
@@ -17,6 +18,8 @@ export class Machine {
   ) {
     this.reboot();
   }
+
+  onScopeItemSet: (scope: Scope, name: string, value: ValueBox<any>) => void = () => {};
 
   run() {
     const {ops, argsQueue, stack} = this;

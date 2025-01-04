@@ -7,106 +7,130 @@
 * Idea: Use ZOD to verify the shape of values
 */
 
-import type {ClassValue} from "./values/class_value";
-import {type ReadonlyDict} from "./generics";
+import {ClassValue} from "./values/class_value";
+import {Dict} from "./generics";
 import {type MachineOp} from "./machine_ops";
-import type {ObjectValue} from "./values/object_value";
-import type {ProcValue} from "./values/proc_value";
+import {ObjectValue} from "./values/object_value";
+import {ProcValue} from "./values/proc_value";
+import {nilValue} from "./values/nil_value";
+import {IteratorValue} from "./values/iterator_value";
 
 export abstract class ClassDefinition<T> {
-  abstract extends?: ClassDefinition<any>;
+  abstract superClass?: ClassDefinition<any>;
   abstract className: string;
   abstract stringifyValue(value: T): string
-  abstract methodOpsByName: ReadonlyDict<ReadonlyArray<MachineOp>>;
+  abstract instantiate(...args: any[]): T;
+  methodOpsByName: Dict<readonly MachineOp[]> = {};
+  setMethodImplementation(name: string, ops: ReadonlyArray<MachineOp>) {
+    this.methodOpsByName[name] = ops;
+  }
+  hasMethodImplementation(name: string) {
+    return this.methodOpsByName[name] !== undefined;
+  }
 }
 
 export const theObjectClass = new class extends ClassDefinition<ObjectValue> {
-  extends = undefined;
+  superClass = undefined;
   className = "Object";
-
-  methodOpsByName = {};
 
   stringifyValue(value: ObjectValue) {
     return value.toString();
   }
+
+  instantiate = () => {
+    return new ObjectValue();
+  }
 }
 
-export const theClassClass = new class extends ClassDefinition<Readonly<ClassValue>> {
-  extends = theObjectClass;
+export const theClassClass = new class extends ClassDefinition<Readonly<ClassValue<unknown>>> {
+  superClass = theObjectClass;
   className = "Class";
 
-  methodOpsByName = {};
-
-  stringifyValue(value: Readonly<ClassValue>) {
+  stringifyValue(value: Readonly<ClassValue<unknown>>) {
     return value.toString();
   }
-} as ClassDefinition<Readonly<ClassValue>>;
+
+  instantiate = () => {
+    return new ClassValue({}, () => {});
+  }
+} as ClassDefinition<Readonly<ClassValue<unknown>>>;
 
 export const theProcClass = new class extends ClassDefinition<Readonly<ProcValue>> {
-  extends = theObjectClass;
+  superClass = theObjectClass;
   className = "Proc";
-
-  methodOpsByName = {};
 
   stringifyValue(value: Readonly<ProcValue>) {
     return value.toString();
   }
+
+  instantiate = () => {
+    return new ProcValue();
+  }
 } as ClassDefinition<Readonly<ProcValue>>;
 
 export const theNilClass = new class extends ClassDefinition<undefined> {
-  extends = theObjectClass;
+  superClass = theObjectClass;
   className = "Nil";
-
-  methodOpsByName = {};
 
   stringifyValue() {
     return "nil";
   }
+
+  instantiate = () => nilValue;
+
 } as ClassDefinition<undefined>;
 
 export const theNumberClass = new class extends ClassDefinition<number> {
-  extends = theObjectClass;
+  superClass = theObjectClass;
   className = "Number";
-
-  methodOpsByName = {};
 
   stringifyValue(value: number) {
     return String(value);
   }
+
+  instantiate = () => 0;
 } as ClassDefinition<number>;
 
 const theBooleanClass = new class extends ClassDefinition<boolean> {
-  extends = theObjectClass;
+  superClass = theObjectClass;
   className = "Boolean";
-
-  methodOpsByName = {};
 
   stringifyValue(value: boolean) {
     return String(value);
   }
+
+  instantiate = () => false;
 }
 
 export const theTrueClass = new class extends ClassDefinition<true> {
-  extends = theBooleanClass;
+  superClass = theBooleanClass;
   className = "True";
-
-  methodOpsByName = {
-  }
 
   stringifyValue() {
     return "true";
   }
+
+  instantiate = () => true as const;
 } as ClassDefinition<true>;
 
 export const theFalseClass = new class extends ClassDefinition<false> {
-  extends = theBooleanClass;
+  superClass = theBooleanClass;
   className = "False";
 
   stringifyValue() {
     return "false";
   }
 
-  methodOpsByName = {
-  }
+  instantiate = () => false as const;
 } as ClassDefinition<false>;
 
+export const theIteratorClass = new class extends ClassDefinition<IteratorValue> {
+  superClass = theObjectClass;
+  className = "Iterator";
+
+  stringifyValue(value: IteratorValue) {
+    return value.toString();
+  }
+
+  instantiate = () => new IteratorValue();
+}

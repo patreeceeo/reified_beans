@@ -2,27 +2,6 @@
 export const toolbox = {
   kind: 'categoryToolbox',
   contents: [
-    // {
-    //   kind: 'category',
-    //   name: 'Variables',
-    //   categorystyle: 'variable_category',
-    //   contents: [
-    //     {
-    //       kind: 'block',
-    //       type: 'variables_get',
-    //       fields: {
-    //         VAR: 'item',
-    //       },
-    //     },
-    //     {
-    //       kind: 'block',
-    //       type: 'variables_set',
-    //       fields: {
-    //         VAR: 'item',
-    //       },
-    //     },
-    //   ],
-    // },
     {
       kind: 'category',
       name: 'Controls',
@@ -35,6 +14,10 @@ export const toolbox = {
         {
           kind: 'block',
           type: 'controls_begin_statement',
+        },
+        {
+          kind: 'block',
+          type: 'messages_any',
         },
       ],
     },
@@ -75,7 +58,21 @@ export const toolbox = {
           type: 'procedures_defreturn',
         },
       ],
-    }
+    },
+    {
+      kind: 'category',
+      name: 'variables',
+      categorystyle: 'variable_category',
+      contents: [
+        {
+          kind: 'block',
+          type: 'variables_get',
+          fields: {
+            VAR: '',
+          },
+        },
+      ],
+    },
     // {
     //   kind: 'category',
     //   name: 'Logic',

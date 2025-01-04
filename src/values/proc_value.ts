@@ -1,4 +1,4 @@
-import {theProcClass} from "src/class_definitions";
+import {ClassDefinition, theProcClass} from "src/class_definitions";
 import {Value} from "./value";
 
 export type ProcId = number;
@@ -10,7 +10,7 @@ export function resetProcId() {
 }
 
 export class ProcValue extends Value {
-  classDefinition = theProcClass;
+  classDefinition = theProcClass as ClassDefinition<this>;
   id = nextId++;
   address: VirtualMachineAddress = 0;
   /** The proc that this proc is defined in */

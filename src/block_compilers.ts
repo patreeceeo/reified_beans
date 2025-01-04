@@ -1,4 +1,3 @@
-import {theProcClass} from './class_definitions';
 import type {BlockCompiler} from './compiler';
 import {newMachineOp } from './machine_ops';
 
@@ -84,7 +83,16 @@ export const boolean_messages_ifTrue_ifFalse: BlockCompiler = (block, compiler) 
     // the lookup method op will have unshifted the method's proc id into the args
     // push state to shift the proc from args and call it
     newMachineOp("PushState"),
+    // Shift off the first proc
+    newMachineOp("ShiftArg"),
   );
+
+  if(ifTrue && ifFalse) {
+    compiler.addOpsToCurrentProc(
+      // Shift off the second proc
+      newMachineOp("ShiftArg"),
+    )
+  }
 }
 
 export const procedures_defreturn: BlockCompiler = (block, compiler) => {
@@ -104,7 +112,29 @@ export const procedures_defreturn: BlockCompiler = (block, compiler) => {
     newMachineOp(
       "PushArg",
       proc,
-      theProcClass
+    ),
+  )
+}
+
+export const variables_get: BlockCompiler = (block, compiler) => {
+  compiler.queueNextBlock(block);
+  compiler.addOpsToCurrentProc(
+    newMachineOp(
+      "GetFromScope",
+      block.getFieldValue('VAR')
+    )
+  )
+}
+
+export const messages_any: BlockCompiler = (block, compiler) => {
+  compiler.queueNextBlock(block);
+  compiler.addOpsToCurrentProc(
+    newMachineOp(
+      "LookupMethod",
+      block.getFieldValue('MESSAGE'),
+    ),
+    newMachineOp(
+      "PushState"
     )
   )
 }
