@@ -1,8 +1,8 @@
-import {theFalseClass, theNilClass, theNumberClass, theTrueClass, type ClassDefinition} from "./class_definitions";
+import {theFalseClass, theNilClass, theNumberClass, theStringClass, theTrueClass, type ClassDefinition} from "./class_definitions";
 import {nilValue, type NilValue} from "./values/nil_value";
 import type {Value} from "./values/value";
 
-export type ValueBoxValue = Value | number | boolean | NilValue;
+export type ValueBoxValue = Value | number | boolean | string | NilValue;
 
 class _ValueBox<T extends ValueBoxValue> {
   constructor(private value: T, readonly classDefinition: ClassDefinition<T>) {
@@ -37,6 +37,8 @@ export function getBoxedValue<T extends ValueBoxValue>(value: T): ValueBox<T> {
 function inferClassDefinition<T extends ValueBoxValue>(value: T): ClassDefinition<T> {
   const typeofValue = typeof value;
   switch(typeofValue) {
+    case "string":
+      return theStringClass as ClassDefinition<T>;
     case "number":
       return theNumberClass as ClassDefinition<T>;
     case "object":

@@ -91,6 +91,17 @@ export const theNumberClass = new class extends ClassDefinition<number> {
   instantiate = () => 0;
 } as ClassDefinition<number>;
 
+export const theStringClass = new class extends ClassDefinition<string> {
+  superClass = theObjectClass;
+  className = "String";
+
+  stringifyValue(value: string) {
+    return value;
+  }
+
+  instantiate = () => "";
+} as ClassDefinition<string>;
+
 const theBooleanClass = new class extends ClassDefinition<boolean> {
   superClass = theObjectClass;
   className = "Boolean";
