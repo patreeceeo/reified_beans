@@ -13,7 +13,7 @@ import {type MachineOp} from "./machine_ops";
 import {ObjectValue} from "./values/object_value";
 import {ProcValue} from "./values/proc_value";
 import {nilValue} from "./values/nil_value";
-import {IteratorValue} from "./values/iterator_value";
+import {OrderedCollectionValue} from "./values/iterator_value";
 
 export abstract class ClassDefinition<T> {
   abstract superClass?: ClassDefinition<any>;
@@ -124,13 +124,13 @@ export const theFalseClass = new class extends ClassDefinition<false> {
   instantiate = () => false as const;
 } as ClassDefinition<false>;
 
-export const theIteratorClass = new class extends ClassDefinition<IteratorValue> {
+export const theOrderedCollectionClass = new class extends ClassDefinition<OrderedCollectionValue> {
   superClass = theObjectClass;
-  className = "Iterator";
+  className = "OrderedCollection";
 
-  stringifyValue(value: IteratorValue) {
+  stringifyValue(value: OrderedCollectionValue) {
     return value.toString();
   }
 
-  instantiate = () => new IteratorValue();
+  instantiate = () => new OrderedCollectionValue();
 }

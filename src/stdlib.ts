@@ -5,7 +5,7 @@
 *
 * Methods are being defined here to prevent circular dependency between the class definitions and machine ops.
 */
-import {theIteratorClass, theClassClass, theFalseClass, theNilClass, theNumberClass, theProcClass, theTrueClass, theObjectClass} from "./class_definitions";
+import {theOrderedCollectionClass, theClassClass, theFalseClass, theNilClass, theNumberClass, theProcClass, theTrueClass, theObjectClass} from "./class_definitions";
 import {newMachineOp} from "./machine_ops";
 
 export function loadStdlib() {
@@ -57,5 +57,5 @@ export const stdlib = [
   theNilClass,
   theProcClass,
   theClassClass,
-  theIteratorClass
+  theOrderedCollectionClass
 ]

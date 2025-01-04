@@ -1,20 +1,13 @@
-import {type ClassDefinition, theIteratorClass} from "src/class_definitions";
+import {type ClassDefinition, theOrderedCollectionClass} from "src/class_definitions";
 import {Value} from "./value";
+import type {ValueBox} from "src/value_box";
 
-/** The most light-weight way to return multiple values from a function:
-* push N values into the args queue, then push an iterator of length N.
-* The iterator can then be used to iterate over the results or create
-* an array, set... any other kind of collection containing the results.
-*/
-export class IteratorValue extends Value {
-  classDefinition = theIteratorClass as ClassDefinition<this>;
+export class OrderedCollectionValue extends Value {
+  classDefinition = theOrderedCollectionClass as ClassDefinition<this>;
 
-  index = 0;
-  constructor(public length: number = 0) {
-    super();
-  }
+  items = [] as ValueBox<any>[];
 
   toString() {
-    return `an iterator of length ${this.length}`;
+    return `an OrderedCollection (${this.items.map(item => item.valueOf()).join(", ")})`;
   }
 }
