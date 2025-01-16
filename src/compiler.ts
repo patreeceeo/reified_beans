@@ -18,18 +18,21 @@ export interface BlockCompiler {
 }
 
 export class Compiler {
-  blockQueue = Queue<Blockly.Block>();
+  messageBlockQueue = Queue<Blockly.Block>();
+  statementBlockStack = Stack<Blockly.Block>();
   forBlock = forBlock;
   opsByProc = Dict<MachineOp[]>();
   procStack = Stack<ProcId>();
   procById = Dict<ProcValue>();
+  statementPostfixOps = [] as MachineOp[];
 
   constructor(
     readonly workspace: Blockly.Workspace
   ) {}
 
   reset() {
-    this.blockQueue = Queue<Blockly.Block>();
+    this.messageBlockQueue = Queue<Blockly.Block>();
+    this.statementBlockStack = Stack<Blockly.Block>();
     this.opsByProc = Dict<MachineOp[]>();
     this.procStack = Stack<ProcId>();
     this.procById = Dict<ProcValue>();
@@ -67,10 +70,6 @@ export class Compiler {
     return machine;
   }
 
-  compileBlock(block: Blockly.Block) {
-    this.blockQueue.push(block);
-    this.processBlockQueue();
-  }
 
   newProc(): ProcValue {
     const proc = new ProcValue();
@@ -100,12 +99,24 @@ export class Compiler {
     opsForProc.push(...ops);
   }
 
-  queueNextBlock(block: Blockly.Block) {
+  queueNextMessageBlock(block: Blockly.Block) {
     const nextBlock = block.getInputTargetBlock('NEXT')!;
     if(nextBlock) {
-      this.blockQueue.push(nextBlock);
+      this.messageBlockQueue.push(nextBlock);
     } else {
       console.log("No next block for", block.type);
+    }
+  }
+
+  compileBlock(block: Blockly.Block) {
+    this.messageBlockQueue.push(block);
+    this.process();
+  }
+
+  pushNextStatementBlock(block: Blockly.Block) {
+    const nextStatementBlock = block.getNextBlock();
+    if(nextStatementBlock) {
+      this.statementBlockStack.push(nextStatementBlock);
     }
   }
 
@@ -115,9 +126,27 @@ export class Compiler {
     return compiler;
   }
 
-  processBlockQueue() {
-    while (this.blockQueue.length > 0) {
-      const block = this.blockQueue.shift()!;
+  process() {
+    let block: Blockly.Block | undefined;
+    while(true) {
+
+      if(this.messageBlockQueue.length > 0) {
+        block = this.messageBlockQueue.shift()!;
+      } else {
+
+        // Whether or not there's a next statement, need to finish the current statement.
+        this.addOpsToCurrentProc(...this.statementPostfixOps);
+        this.statementPostfixOps.length = 0;
+
+        if(this.statementBlockStack.length > 0) {
+          block = this.statementBlockStack.pop()!;
+        } else {
+
+          // No more blocks to process
+          break;
+        }
+      }
+
       const compiler = this.getBlockCompiler(block);
       compiler(block, this);
     }

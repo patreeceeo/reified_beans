@@ -2,7 +2,7 @@ import type {BlockCompiler} from './compiler';
 import {newMachineOp } from './machine_ops';
 
 export const math_number: BlockCompiler = (block, compiler) => {
-  compiler.queueNextBlock(block);
+  compiler.queueNextMessageBlock(block);
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "PushArg",
@@ -12,7 +12,8 @@ export const math_number: BlockCompiler = (block, compiler) => {
 }
 
 export const controls_begin_statement: BlockCompiler = (block, compiler) => {
-  compiler.queueNextBlock(block);
+  compiler.queueNextMessageBlock(block);
+  compiler.pushNextStatementBlock(block);
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "ClearArgs"
@@ -31,7 +32,7 @@ export const number_messages_binary: BlockCompiler = (block, compiler) => {
     console.log("No value field for next block of number_messages_binary");
     return [];
   }
-  compiler.queueNextBlock(nextBlock);
+  compiler.queueNextMessageBlock(nextBlock);
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "PushArg",
@@ -117,7 +118,7 @@ export const procedures_defreturn: BlockCompiler = (block, compiler) => {
 }
 
 export const variables_get: BlockCompiler = (block, compiler) => {
-  compiler.queueNextBlock(block);
+  compiler.queueNextMessageBlock(block);
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "GetFromScope",
@@ -127,20 +128,17 @@ export const variables_get: BlockCompiler = (block, compiler) => {
 }
 
 export const variables_set: BlockCompiler = (block, compiler) => {
-  const nextBlock = block.getInputTargetBlock('NEXT');
-  if(nextBlock) {
-    compiler.compileBlock(nextBlock);
-    compiler.addOpsToCurrentProc(
-      newMachineOp(
-        "AddToScope",
-        block.getFieldValue('NAME')
-      )
+  compiler.queueNextMessageBlock(block);
+  compiler.statementPostfixOps.push(
+    newMachineOp(
+      "AddToScope",
+      block.getFieldValue('NAME')
     )
-  }
+  )
 }
 
 export const messages_any: BlockCompiler = (block, compiler) => {
-  compiler.queueNextBlock(block);
+  compiler.queueNextMessageBlock(block);
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "LookupMethod",
