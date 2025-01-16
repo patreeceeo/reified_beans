@@ -121,9 +121,22 @@ export const variables_get: BlockCompiler = (block, compiler) => {
   compiler.addOpsToCurrentProc(
     newMachineOp(
       "GetFromScope",
-      block.getFieldValue('VAR')
+      block.getFieldValue('SCOPE_ITEM_DROPDOWN')
     )
   )
+}
+
+export const variables_set: BlockCompiler = (block, compiler) => {
+  const nextBlock = block.getInputTargetBlock('NEXT');
+  if(nextBlock) {
+    compiler.compileBlock(nextBlock);
+    compiler.addOpsToCurrentProc(
+      newMachineOp(
+        "AddToScope",
+        block.getFieldValue('NAME')
+      )
+    )
+  }
 }
 
 export const messages_any: BlockCompiler = (block, compiler) => {

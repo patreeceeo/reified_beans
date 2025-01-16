@@ -7,7 +7,6 @@ import {ClassValue} from "./values/class_value";
 import type {Machine} from "./machine";
 import type {ProcId, ProcValue} from "./values/proc_value";
 import type {ClassDefinition} from "./class_definitions";
-import type {Dict} from "./generics";
 
 export abstract class MachineOp {
   abstract doIt(machine: Machine): void;
@@ -173,7 +172,7 @@ class LookupMethod extends MachineOp {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const receiver = argsQueue.peek();
-    invariant(receiver !== undefined, "No receiver");
+    invariant(receiver !== undefined, `No receiver for method ${this.methodName}`);
     const procId = this.getMethodProcId(receiver, this.methodName, state);
     const proc = procById[procId];
     invariant(proc !== undefined, `No proc with id ${procId}`);
@@ -192,13 +191,12 @@ class AddToScope extends MachineOp {
   ) {
     super();
   }
-  doIt({stack, argsQueue, onScopeItemSet}: Machine) {
+  doIt({stack, argsQueue }: Machine) {
     const state = stack.peek();
     invariant(state !== undefined, "Machine stack is empty");
     const value = this.value ?? argsQueue.peek();
     invariant(value !== undefined, "No value to add to scope");
     state.set(this.key, value);
-    onScopeItemSet(state, this.key, value);
   }
   toString() {
     return this.value ? `AddToScope(${this.key}, ${this.value})` : `AddToScope(${this.key})`;

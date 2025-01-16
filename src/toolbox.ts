@@ -67,9 +67,13 @@ export const toolbox = {
         {
           kind: 'block',
           type: 'variables_get',
+        },
+        {
+          kind: 'block',
+          type: 'variables_set',
           fields: {
-            VAR: '',
-          },
+            NAME: 'x',
+          }
         },
       ],
     },

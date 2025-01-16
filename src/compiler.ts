@@ -64,9 +64,6 @@ export class Compiler {
     }
 
     const machine = new Machine(ops, this.procById);
-    machine.onScopeItemSet = (scope, name, value) => {
-      this.workspace.createVariable(name);
-    }
     return machine;
   }
 

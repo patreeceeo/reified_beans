@@ -19,8 +19,6 @@ export class Machine {
     this.reboot();
   }
 
-  onScopeItemSet: (scope: Scope, name: string, value: ValueBox<any>) => void = () => {};
-
   run() {
     const {ops, argsQueue, stack} = this;
     let state = this.stack.peek();

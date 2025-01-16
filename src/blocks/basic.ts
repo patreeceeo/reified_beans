@@ -89,12 +89,27 @@ export default Blockly.common.createBlockDefinitionsFromJsonArray([
   // TODO use different blocks for getting classes and local variables?
   {
     type: 'variables_get',
-    message0: '%1 %2',
+    message0: 'get %1 %2',
+    args0: [
+      {
+        type: 'input_dummy',
+        name: 'SCOPE_ITEM',
+      },
+      {
+        type: 'input_value',
+        name: 'NEXT',
+      },
+    ],
+    output: null,
+    extensions: ['scope_item_dropdown_extension'],
+  },
+  {
+    type: 'variables_set',
+    message0: 'set %1 to %2',
     args0: [
       {
         type: 'field_input',
-        name: 'VAR',
-        variable: 'item',
+        name: 'NAME',
       },
       {
         type: 'input_value',
