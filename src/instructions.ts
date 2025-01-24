@@ -94,8 +94,8 @@ export enum SpecialSelector {
 }
 
 
-interface Instruction<TArgs extends any[]> {
-  type: InstructionType;
+export interface Instruction<TArgs extends any[]> {
+  readonly type: InstructionType;
   writeWith(writer: InstructionWriter, ...args: TArgs): void;
   explain(...args: TArgs): string;
   readArgs(reader: InstructionReader, target: number[]): TArgs;
@@ -216,7 +216,7 @@ export const instReturnStackTopFrom: Instruction<[EvaluationStackType]> = {
 * @param offset The offset from the source
 * @see PushSource
 */
-export const instPush: Instruction<[PushSource, number]> & {bitShift: number} = {
+export const instPush: Instruction<[PushSource, number]> & {readonly bitShift: number} = {
   type: InstructionType.PUSH,
 
   bitShift: 6,
@@ -242,7 +242,7 @@ export const instPush: Instruction<[PushSource, number]> & {bitShift: number} = 
 * @param offset The offset from the target
 * @see StoreTarget
 */
-export const instStore: Instruction<[StoreTarget, number]> & {bitShift: number} = {
+export const instStore: Instruction<[StoreTarget, number]> & {readonly bitShift: number} = {
   type: InstructionType.STORE,
 
   bitShift: 6,
@@ -268,7 +268,7 @@ export const instStore: Instruction<[StoreTarget, number]> & {bitShift: number} 
 * @param offset The offset from the target
 * @see StoreTarget
 */
-export const instPopAndStore: Instruction<[StoreTarget, number]> & {bitShift: number} = {
+export const instPopAndStore: Instruction<[StoreTarget, number]> & {readonly bitShift: number} = {
   type: InstructionType.POP_AND_STORE,
 
   bitShift: 6,
@@ -295,7 +295,7 @@ export const instPopAndStore: Instruction<[StoreTarget, number]> & {bitShift: nu
 * @param numArgs The number of arguments to the Message
 * @see SpecialSelector
 */
-export const instSendSpecialSelector: Instruction<[SpecialSelector, number]> & {bitShift: number} = {
+export const instSendSpecialSelector: Instruction<[SpecialSelector, number]> & {readonly bitShift: number} = {
   type: InstructionType.SEND_SPECIAL_SELECTOR,
 
   bitShift: 3,
@@ -321,7 +321,7 @@ export const instSendSpecialSelector: Instruction<[SpecialSelector, number]> & {
 * @param selector The index of the literal selector found in the method's literal array
 * @param numArgs The number of arguments to the message
 */
-export const instSendLiteralSelectorExt: Instruction<[number, number]> & {bitShift: number} = {
+export const instSendLiteralSelectorExt: Instruction<[number, number]> & {readonly bitShift: number} = {
   type: InstructionType.SEND_LITERAL_SELECTOR_EXT,
 
   bitShift: 7,
@@ -347,7 +347,7 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {bitShi
 * @param numArgs The number of arguments to the Message
 * @see SpecialSelector
 */
-export const instSuperSendSpecialSelector: Instruction<[SpecialSelector, number]> & {bitShift: number} = {
+export const instSuperSendSpecialSelector: Instruction<[SpecialSelector, number]> & {readonly bitShift: number} = {
   type: InstructionType.SUPER_SEND_SPECIAL_SELECTOR,
 
   bitShift: 3,
@@ -373,7 +373,7 @@ export const instSuperSendSpecialSelector: Instruction<[SpecialSelector, number]
 * @param selector The index of the literal selector found in the method's literal array
 * @param numArgs The number of arguments to the message
 */
-export const instSuperSendLiteralSelectorExt: Instruction<[number, number]> & {bitShift: 7} = {
+export const instSuperSendLiteralSelectorExt: Instruction<[number, number]> & {readonly bitShift: 7} = {
   type: InstructionType.SUPER_SEND_LITERAL_SELECTOR_EXT,
 
   bitShift: 7,
@@ -576,6 +576,11 @@ export class InstructionWriter {
     this.target[this.index++] = twoBytes;
     this.finished = this.index === this.target.length;
   }
+
+  reset() {
+    this.index = 0;
+    this.finished = false;
+  }
 }
 
 /**
@@ -601,6 +606,11 @@ export class InstructionReader {
 
   peek(): number {
     return this.getAndSkip(0);
+  }
+
+  reset() {
+    this.index = 0;
+    this.finished = false;
   }
 }
 
