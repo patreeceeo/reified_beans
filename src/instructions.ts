@@ -614,7 +614,9 @@ const SIGNED_TWO_BYTE_MAX = (1 << 15) - 1;
  */
 export class InstructionWriter {
   private index = 0;
-  finished = false;
+  get finished() {
+    return this.index >= this.target.length;
+  }
   constructor(private target: Int16Array) {}
 
   write(twoBytes: number) {
@@ -635,12 +637,10 @@ export class InstructionWriter {
       "a signed two byte value",
     );
     this.target[this.index++] = twoBytes;
-    this.finished = this.index === this.target.length;
   }
 
   reset() {
     this.index = 0;
-    this.finished = false;
   }
 }
 
@@ -649,7 +649,9 @@ export class InstructionWriter {
  */
 export class InstructionReader {
   private index = 0;
-  finished = false;
+  get finished() {
+    return this.index >= this.source.length;
+  }
   constructor(private source: Int16Array) {}
 
   getAndSkip(n: number): number {
@@ -663,7 +665,6 @@ export class InstructionReader {
     );
     const res = this.source[this.index];
     this.index += n;
-    this.finished = this.index >= this.source.length;
     return res;
   }
 
@@ -677,6 +678,5 @@ export class InstructionReader {
 
   reset() {
     this.index = 0;
-    this.finished = false;
   }
 }
