@@ -615,19 +615,11 @@ const SIGNED_TWO_BYTE_MAX = (1 << 15) - 1;
 export class InstructionWriter {
   private index = 0;
   get finished() {
-    return this.index >= this.target.length;
+    return this.index >= this.view.byteLength;
   }
-  constructor(private target: Int16Array) {}
+  constructor(private view: DataView) {}
 
   write(twoBytes: number) {
-    invariant(
-      !this.finished,
-      RangeError,
-      this.index,
-      0,
-      this.target.length - 1,
-      "an instruction index",
-    );
     invariant(
       twoBytes >= SIGNED_TWO_BYTE_MIN && twoBytes <= SIGNED_TWO_BYTE_MAX,
       RangeError,
@@ -636,7 +628,8 @@ export class InstructionWriter {
       SIGNED_TWO_BYTE_MAX,
       "a signed two byte value",
     );
-    this.target[this.index++] = twoBytes;
+    this.view.setInt16(this.index, twoBytes, true);
+    this.index += 2;
   }
 
   reset() {
@@ -650,26 +643,19 @@ export class InstructionWriter {
 export class InstructionReader {
   private index = 0;
   get finished() {
-    return this.index >= this.source.length;
+    return this.index >= this.view.byteLength;
   }
-  constructor(private source: Int16Array) {}
+
+  constructor(private view: DataView) {}
 
   getAndSkip(n: number): number {
-    invariant(
-      !this.finished,
-      RangeError,
-      this.index,
-      0,
-      this.source.length - 1,
-      "an instruction index",
-    );
-    const res = this.source[this.index];
+    const res = this.view.getInt16(this.index, true);
     this.index += n;
     return res;
   }
 
   read(): number {
-    return this.getAndSkip(1);
+    return this.getAndSkip(2);
   }
 
   peek(): number {

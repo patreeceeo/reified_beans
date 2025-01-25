@@ -29,9 +29,10 @@ import {
   instPopAndJumpOnFalse,
 } from "./instructions";
 
-const array = new Int16Array(3);
-const writer = new InstructionWriter(array);
-const reader = new InstructionReader(array);
+const array = new ArrayBuffer(4);
+const view = new DataView(array);
+const writer = new InstructionWriter(view);
+const reader = new InstructionReader(view);
 
 function testPeekInstruction<TArgs extends any[], I extends Instruction<TArgs>>(
   instruction: I,
