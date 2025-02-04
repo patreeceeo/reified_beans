@@ -2,18 +2,21 @@ import { invariant, StackUnderflowError, TypeError } from "./errors";
 import type { VirtualMachine } from "./virtual_machine";
 import { type VirtualObject } from "./virtual_objects";
 
-export enum ContextVariable {
+export enum ContextValue {
   ReceiverVar,
   TempVar,
   LiteralVar,
+  LiteralConst,
 }
 
-export enum ContextValue {
-  ReceiverVar = ContextVariable.ReceiverVar,
-  TempVar = ContextVariable.TempVar,
-  LiteralVar = ContextVariable.LiteralVar,
-  LiteralConst = 3,
-}
+export const ContextVariable = {
+  ReceiverVar: ContextValue.ReceiverVar,
+  TempVar: ContextValue.TempVar,
+  LiteralVar: ContextValue.LiteralVar,
+} as const;
+
+export type ContextVariable =
+  (typeof ContextVariable)[keyof typeof ContextVariable];
 
 export function loadContextValue(
   value: ContextValue | ContextVariable,
