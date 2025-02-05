@@ -58,7 +58,6 @@ export interface Instruction<TArgs extends any[]> {
  * Pop the object from the top of the stack and store in the receiver variable at the given 0-based offset
  * @param offset The offset from the start of the receiver variables
  *
- * (TODO:simplify) Do we need to have this _and_ instPopAndStore?
  */
 // export const instPopAndStoreReceiverVar: Instruction<[Uint3]> = {
 //   type: InstructionType.POP_AND_STORE_RECEIVER_VAR,
@@ -90,7 +89,6 @@ export interface Instruction<TArgs extends any[]> {
  * Pop the object from the top of the stack and store in the temporary variable at the given 0-based offset
  * @param offset The offset from the start of the temporary variables
  *
- * (TODO:simplify) Do we need to have this _and_ instPopAndStore?
  */
 // export const instPopAndStoreTempVar: Instruction<[Uint3]> = {
 //   type: InstructionType.POP_AND_STORE_TEMP_VAR,
