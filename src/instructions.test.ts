@@ -1,9 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
   type Instruction,
-  InstructionWriter,
-  InstructionReader,
-  peekInstruction,
   instPushSpecialVal,
   instReturnSpecialVal,
   instPush,
@@ -15,6 +12,8 @@ import {
   instJump,
   instPopAndJumpOnTrue,
   instPopAndJumpOnFalse,
+  reifyInstruction,
+  InstructionPointer,
 } from "./instructions";
 import { VirtualMachine } from "./virtual_machine";
 import { ClosureContext } from "./contexts";
@@ -32,9 +31,7 @@ import {
 } from "./context_value";
 
 const array = new ArrayBuffer(4);
-const view = new DataView(array);
-const writer = new InstructionWriter(view);
-const reader = new InstructionReader(view);
+const pointer = new InstructionPointer(array, 0, 4);
 
 const additionalTests = {
   // [instPopAndStoreReceiverVar.type]: ([receiverVarOffset]: Parameters<typeof instPopAndStoreReceiverVar.explain>) => {
@@ -409,14 +406,13 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      const initialPc = 5;
 
-      context.pc = initialPc;
+      context.instructionPointer.jumpRelative(5);
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.pc).toBe(initialPc + offset);
+      expect(context.instructionPointer.byteOffset).toBe(5 + offset);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -444,15 +440,14 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      const initialPc = 5;
 
+      context.instructionPointer.jumpRelative(5);
       context.evalStack.push(vm.asLiteral(true));
-      context.pc = initialPc;
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.pc).toBe(initialPc + offset);
+      expect(context.instructionPointer.byteOffset).toBe(5 + offset);
     });
 
     test("Do it successfully (without jump)", () => {
@@ -460,15 +455,14 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      const initialPc = 5;
 
+      context.instructionPointer.jumpRelative(5);
       context.evalStack.push(vm.asLiteral(false));
-      context.pc = initialPc;
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.pc).toBe(initialPc);
+      expect(context.instructionPointer.byteOffset).toBe(5);
     });
 
     test("Fail if the offset is out of bounds", () => {
@@ -493,7 +487,6 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      context.pc = 5;
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
@@ -509,15 +502,14 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      const initialPc = 5;
 
+      context.instructionPointer.jumpRelative(5);
       context.evalStack.push(vm.asLiteral(false));
-      context.pc = initialPc;
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.pc).toBe(initialPc + offset);
+      expect(context.instructionPointer.byteOffset).toBe(5 + offset);
     });
 
     test("Do it successfully (without jump)", () => {
@@ -525,15 +517,14 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      const initialPc = 5;
 
+      context.instructionPointer.jumpRelative(5);
       context.evalStack.push(vm.asLiteral(true));
-      context.pc = initialPc;
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.pc).toBe(initialPc);
+      expect(context.instructionPointer.byteOffset).toBe(5);
     });
 
     test("Fail if the offset is out of bounds", () => {
@@ -558,7 +549,6 @@ const additionalTests = {
       const closure = new Closure(4, 4, 4, vm, 0, 12);
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
-      context.pc = 5;
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
@@ -570,10 +560,10 @@ function testPeekInstruction<TArgs extends any[], I extends Instruction<TArgs>>(
   instruction: I,
   args: TArgs,
 ) {
-  writer.reset();
-  reader.reset();
-  instruction.writeWith(writer, ...args);
-  const result = peekInstruction(reader);
+  pointer.reset();
+  instruction.writeWith(pointer, ...args);
+  pointer.reset();
+  const result = reifyInstruction(pointer.peek());
   expect(result).toBe(instruction);
 }
 
@@ -581,11 +571,11 @@ function testReadInstructionArgs<
   TArgs extends any[],
   I extends Instruction<TArgs>,
 >(instruction: I, args: TArgs) {
-  writer.reset();
-  reader.reset();
-  instruction.writeWith(writer, ...args);
-  const readArgs = [] as any[];
-  expect(instruction.readArgs(reader, readArgs)).toEqual(args);
+  pointer.reset();
+  instruction.writeWith(pointer, ...args);
+  pointer.reset();
+  const readArgsTarget = [] as any[];
+  expect(instruction.readArgs(pointer, readArgsTarget)).toEqual(args);
 }
 
 function testInstruction<TArgs extends any[], I extends Instruction<TArgs>>(

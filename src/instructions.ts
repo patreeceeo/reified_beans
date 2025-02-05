@@ -48,9 +48,9 @@ export enum EvaluationStackType {
 
 export interface Instruction<TArgs extends any[]> {
   readonly type: InstructionType;
-  writeWith(writer: InstructionWriter, ...args: TArgs): void;
+  writeWith(writer: InstructionPointer, ...args: TArgs): void;
   explain(...args: TArgs): string;
-  readArgs(reader: InstructionReader, target: number[]): TArgs;
+  readArgs(reader: InstructionPointer, target: number[]): TArgs;
   do(machine: VirtualMachine, ...args: TArgs): void;
 }
 
@@ -125,20 +125,20 @@ export interface Instruction<TArgs extends any[]> {
 export const instPushSpecialVal: Instruction<[SpecialPushValue]> = {
   type: InstructionType.PUSH_SPECIAL_VAL,
 
-  writeWith(writer: InstructionWriter, value: SpecialPushValue) {
+  writeWith(writer, value) {
     writer.write(this.type + value);
   },
 
-  explain(value: SpecialPushValue) {
+  explain(value) {
     return `Push special value ${SpecialPushValue[value]}`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [SpecialPushValue] {
+  readArgs(reader, target): [SpecialPushValue] {
     target[0] = reader.read() - this.type;
     return target as [SpecialPushValue];
   },
 
-  do(machine: VirtualMachine, value: SpecialPushValue) {
+  do(machine, value) {
     const object = reifySpecialPushValue(value, machine);
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
@@ -154,20 +154,20 @@ export const instPushSpecialVal: Instruction<[SpecialPushValue]> = {
 export const instReturnSpecialVal: Instruction<[SpecialReturnValue]> = {
   type: InstructionType.RETURN_SPECIAL_VAL,
 
-  writeWith(writer: InstructionWriter, value: SpecialReturnValue) {
+  writeWith(writer, value) {
     writer.write(this.type + value);
   },
 
-  explain(value: SpecialReturnValue) {
+  explain(value) {
     return `Return special value ${SpecialReturnValue[value]}`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [SpecialReturnValue] {
+  readArgs(reader, target): [SpecialReturnValue] {
     target[0] = reader.read() - this.type;
     return target as [SpecialReturnValue];
   },
 
-  do(machine: VirtualMachine, value: SpecialReturnValue) {
+  do(machine, value) {
     const object = reifySpecialReturnValue(value, machine);
     machine.contextStack.pop();
     const context = machine.contextStack.peek();
@@ -212,7 +212,7 @@ export const instPush: Instruction<[ContextValue, number]> & {
 
   bitShift: 6,
 
-  writeWith(writer: InstructionWriter, source: ContextValue, offset: number) {
+  writeWith(writer, source, offset) {
     writer.write(this.type);
     writer.write(packBits(source, offset, this.bitShift));
   },
@@ -221,15 +221,12 @@ export const instPush: Instruction<[ContextValue, number]> & {
     return `Push from ${ContextValue[source]} at offset ${offset}`;
   },
 
-  readArgs(
-    reader: InstructionReader,
-    target: number[],
-  ): [ContextValue, number] {
+  readArgs(reader, target): [ContextValue, number] {
     reader.read();
     return unpackBits(reader.read(), this.bitShift, target as [number, number]);
   },
 
-  do(machine: VirtualMachine, source: ContextValue, offset: number) {
+  do(machine, source, offset) {
     const object = loadContextValue(source, offset, machine);
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
@@ -250,11 +247,7 @@ export const instStore: Instruction<[ContextVariable, number]> & {
 
   bitShift: 6,
 
-  writeWith(
-    writer: InstructionWriter,
-    target: ContextVariable,
-    offset: number,
-  ) {
+  writeWith(writer, target, offset) {
     writer.write(this.type);
     writer.write(packBits(target, offset, this.bitShift!));
   },
@@ -263,10 +256,7 @@ export const instStore: Instruction<[ContextVariable, number]> & {
     return `Store to ${ContextVariable[target]} at offset ${offset}`;
   },
 
-  readArgs(
-    reader: InstructionReader,
-    target: number[],
-  ): [ContextVariable, number] {
+  readArgs(reader, target): [ContextVariable, number] {
     reader.read();
     return unpackBits(
       reader.read(),
@@ -275,7 +265,7 @@ export const instStore: Instruction<[ContextVariable, number]> & {
     );
   },
 
-  do(machine: VirtualMachine, target: ContextVariable, offset: number) {
+  do(machine, target, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const object = context.evalStack.peek();
@@ -297,11 +287,7 @@ export const instPopAndStore: Instruction<[ContextVariable, number]> & {
 
   bitShift: 6,
 
-  writeWith(
-    writer: InstructionWriter,
-    target: ContextVariable,
-    offset: number,
-  ) {
+  writeWith(writer, target, offset: number) {
     writer.write(this.type);
     writer.write(packBits(target, offset, this.bitShift!));
   },
@@ -310,10 +296,7 @@ export const instPopAndStore: Instruction<[ContextVariable, number]> & {
     return `Pop and store to ${ContextVariable[target]} at offset ${offset}`;
   },
 
-  readArgs(
-    reader: InstructionReader,
-    target: number[],
-  ): [ContextVariable, number] {
+  readArgs(reader, target): [ContextVariable, number] {
     reader.read();
     return unpackBits(
       reader.read(),
@@ -322,7 +305,7 @@ export const instPopAndStore: Instruction<[ContextVariable, number]> & {
     );
   },
 
-  do(machine: VirtualMachine, target: ContextVariable, offset: number) {
+  do(machine, target, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const object = context.evalStack.pop();
@@ -392,7 +375,7 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
 
   bitShift: 7,
 
-  writeWith(writer: InstructionWriter, selector: number, numArgs: number) {
+  writeWith(writer, selector, numArgs) {
     writer.write(this.type);
     writer.write(packBits(selector, numArgs, this.bitShift));
   },
@@ -401,12 +384,12 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
     return `Send literal selector ${selector} with ${numArgs} args`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [number, number] {
+  readArgs(reader, target): [number, number] {
     reader.read();
     return unpackBits(reader.read(), this.bitShift, target as [number, number]);
   },
 
-  do(machine: VirtualMachine, selectorIndex: number, numArgs: number) {
+  do(machine, selectorIndex, numArgs) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const { evalStack } = context;
@@ -504,7 +487,7 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
 export const instPop: Instruction<[]> = {
   type: InstructionType.POP,
 
-  writeWith(writer: InstructionWriter) {
+  writeWith(writer) {
     writer.write(this.type);
   },
 
@@ -512,12 +495,12 @@ export const instPop: Instruction<[]> = {
     return `Pop`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [] {
+  readArgs(reader, target): [] {
     reader.read();
     return target as [];
   },
 
-  do(machine: VirtualMachine) {
+  do(machine) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     invariant(context.evalStack.length > 0, StackUnderflowError, "evaluation");
@@ -531,7 +514,7 @@ export const instPop: Instruction<[]> = {
 export const instDuplicate: Instruction<[]> = {
   type: InstructionType.DUPLICATE,
 
-  writeWith(writer: InstructionWriter) {
+  writeWith(writer) {
     writer.write(this.type);
   },
 
@@ -539,12 +522,12 @@ export const instDuplicate: Instruction<[]> = {
     return `Duplicate`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [] {
+  readArgs(reader, target: number[]): [] {
     reader.read();
     return target as [];
   },
 
-  do(machine: VirtualMachine) {
+  do(machine) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const { evalStack } = context;
@@ -560,7 +543,7 @@ export const instDuplicate: Instruction<[]> = {
 export const instJump: Instruction<[number]> = {
   type: InstructionType.JUMP,
 
-  writeWith(writer: InstructionWriter, offset: number) {
+  writeWith(writer, offset) {
     writer.write(this.type);
     writer.write(offset);
   },
@@ -569,23 +552,16 @@ export const instJump: Instruction<[number]> = {
     return `Jump ${offset}`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [number] {
+  readArgs(reader, target): [number] {
     reader.read();
     target[0] = reader.read();
     return target as [number];
   },
 
-  do(machine: VirtualMachine, offset: number) {
+  do(machine, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    context.pc += offset;
-    invariant(
-      context.pc >= 0 && context.pc < context.closure.instructionByteLength,
-      RangeError,
-      context.pc,
-      0,
-      context.closure.instructionByteLength,
-    );
+    context.instructionPointer.jumpRelative(offset);
   },
 };
 
@@ -597,7 +573,7 @@ export const instJump: Instruction<[number]> = {
 export const instPopAndJumpOnTrue: Instruction<[number]> = {
   type: InstructionType.POP_AND_JUMP_ON_TRUE,
 
-  writeWith(writer: InstructionWriter, offset: number) {
+  writeWith(writer, offset: number) {
     writer.write(this.type);
     writer.write(offset);
   },
@@ -606,27 +582,20 @@ export const instPopAndJumpOnTrue: Instruction<[number]> = {
     return `Pop and jump ${offset} on True`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [number] {
+  readArgs(reader, target): [number] {
     reader.read();
     target[0] = reader.read();
     return target as [number];
   },
 
-  do(machine: VirtualMachine, offset: number) {
+  do(machine, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const { evalStack } = context;
     const object = evalStack.pop();
     invariant(object, StackUnderflowError, "evaluation");
     if (object.isTrue) {
-      context.pc += offset;
-      invariant(
-        context.pc >= 0 && context.pc < context.closure.instructionByteLength,
-        RangeError,
-        context.pc,
-        0,
-        context.closure.instructionByteLength,
-      );
+      context.instructionPointer.jumpRelative(offset);
     }
   },
 };
@@ -639,36 +608,29 @@ export const instPopAndJumpOnTrue: Instruction<[number]> = {
 export const instPopAndJumpOnFalse: Instruction<[number]> = {
   type: InstructionType.POP_AND_JUMP_ON_FALSE,
 
-  writeWith(writer: InstructionWriter, offset: number) {
+  writeWith(writer, offset) {
     writer.write(this.type);
     writer.write(offset);
   },
 
-  explain(offset: number) {
+  explain(offset) {
     return `Pop and jump ${offset} on False`;
   },
 
-  readArgs(reader: InstructionReader, target: number[]): [number] {
+  readArgs(reader, target): [number] {
     reader.read();
     target[0] = reader.read();
     return target as [number];
   },
 
-  do(machine: VirtualMachine, offset: number) {
+  do(machine, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const { evalStack } = context;
     const object = evalStack.pop();
     invariant(object, StackUnderflowError, "evaluation");
     if (object.isFalse) {
-      context.pc += offset;
-      invariant(
-        context.pc >= 0 && context.pc < context.closure.instructionByteLength,
-        RangeError,
-        context.pc,
-        0,
-        context.closure.instructionByteLength,
-      );
+      context.instructionPointer.jumpRelative(offset);
     }
   },
 };
@@ -720,9 +682,7 @@ function unpackBits(
   return target;
 }
 
-export function peekInstruction(reader: InstructionReader): Instruction<any> {
-  const code = reader.peek();
-
+export function reifyInstruction(code: number): Instruction<any> {
   const cached = instructionCodeCache[code];
 
   if (cached) {
@@ -742,15 +702,35 @@ const SIGNED_TWO_BYTE_MIN = -1 << 15;
 const SIGNED_TWO_BYTE_MAX = (1 << 15) - 1;
 
 /**
- * My instances write VM instructions to an Int16Array.
+ * My instances read/write VM instructions to an Int16Array.
  * (TODO:optmem) (TODO:optspeed) Each type of instruction uses only the number of bytes it needs
  */
-export class InstructionWriter {
-  private index = 0;
+export class InstructionPointer {
+  byteOffset = 0;
+
   get finished() {
-    return this.index >= this.view.byteLength;
+    return this.byteOffset >= this.byteOffsetLimit;
   }
-  constructor(private view: DataView) {}
+
+  private view: DataView;
+
+  constructor(
+    buffer: ArrayBuffer,
+    byteOffsetInBuffer: number,
+    readonly byteOffsetLimit: number,
+  ) {
+    this.view = new DataView(buffer, byteOffsetInBuffer, byteOffsetLimit);
+  }
+
+  peek(): number {
+    return this.view.getInt16(this.byteOffset, true);
+  }
+
+  read(): number {
+    const code = this.peek();
+    this.byteOffset += 2;
+    return code;
+  }
 
   write(twoBytes: number) {
     invariant(
@@ -761,41 +741,23 @@ export class InstructionWriter {
       SIGNED_TWO_BYTE_MAX,
       "a signed two byte value",
     );
-    this.view.setInt16(this.index, twoBytes, true);
-    this.index += 2;
+    this.view.setInt16(this.byteOffset, twoBytes, true);
+    this.byteOffset += 2;
   }
 
   reset() {
-    this.index = 0;
-  }
-}
-
-/**
- * My instances read VM instructions from a typed array.
- */
-export class InstructionReader {
-  private index = 0;
-  get finished() {
-    return this.index >= this.view.byteLength;
+    this.byteOffset = 0;
   }
 
-  constructor(private view: DataView) {}
-
-  getAndSkip(n: number): number {
-    const res = this.view.getInt16(this.index, true);
-    this.index += n;
-    return res;
-  }
-
-  read(): number {
-    return this.getAndSkip(2);
-  }
-
-  peek(): number {
-    return this.getAndSkip(0);
-  }
-
-  reset() {
-    this.index = 0;
+  jumpRelative(byteCount: number) {
+    this.byteOffset += byteCount;
+    invariant(
+      this.byteOffset >= 0 && this.byteOffset <= this.byteOffsetLimit,
+      RangeError,
+      0,
+      this.byteOffsetLimit,
+      this.byteOffset,
+      "a valid byte offset",
+    );
   }
 }
