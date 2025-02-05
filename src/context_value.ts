@@ -1,3 +1,4 @@
+import type { ClosureContext } from "./contexts";
 import { invariant, StackUnderflowError, TypeError } from "./errors";
 import type { VirtualMachine } from "./virtual_machine";
 import { type VirtualObject } from "./virtual_objects";
@@ -9,14 +10,11 @@ export enum ContextValue {
   LiteralConst,
 }
 
-export const ContextVariable = {
-  ReceiverVar: ContextValue.ReceiverVar,
-  TempVar: ContextValue.TempVar,
-  LiteralVar: ContextValue.LiteralVar,
-} as const;
-
-export type ContextVariable =
-  (typeof ContextVariable)[keyof typeof ContextVariable];
+export enum ContextVariable {
+  ReceiverVar,
+  TempVar,
+  LiteralVar,
+}
 
 export function loadContextValue(
   value: ContextValue | ContextVariable,
@@ -37,17 +35,26 @@ export function loadContextValue(
     case ContextValue.LiteralConst:
       return context.closure.literals.at(offset);
     case ContextVariable.LiteralVar:
+      return handleLiteralVar(offset, vm, context);
     case ContextValue.LiteralVar:
-      // (TODO:robustness) (TODO:fidelity) use an instance of Association?
-      const vStrClassKey = context.closure.literals.at(offset);
-      invariant(
-        typeof vStrClassKey.primitiveValue === "string",
-        TypeError,
-        `a string`,
-        String(vStrClassKey.primitiveValue),
-      );
-      return vm.globalContext.at(vStrClassKey.primitiveValue);
+      return handleLiteralVar(offset, vm, context);
   }
+}
+
+function handleLiteralVar(
+  offset: number,
+  vm: VirtualMachine,
+  context: ClosureContext,
+): VirtualObject {
+  // (TODO:robustness) (TODO:fidelity) use an instance of Association?
+  const vStrClassKey = context.closure.literals.at(offset);
+  invariant(
+    typeof vStrClassKey.primitiveValue === "string",
+    TypeError,
+    `a string`,
+    String(vStrClassKey.primitiveValue),
+  );
+  return vm.globalContext.at(vStrClassKey.primitiveValue);
 }
 
 export function storeContextValue(
