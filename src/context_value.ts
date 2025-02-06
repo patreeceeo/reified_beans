@@ -25,13 +25,12 @@ export function loadContextValue(
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (value) {
     case ContextVariable.ReceiverVar:
-    case ContextValue.ReceiverVar: {
-      return context.receiver.getVar(offset);
-    }
+      return context.receiver.readVar(offset);
+    case ContextValue.ReceiverVar:
+      return context.receiver.readVar(offset);
     case ContextVariable.TempVar:
-    case ContextValue.TempVar: {
+    case ContextValue.TempVar:
       return context.argsAndTemps.at(offset);
-    }
     case ContextValue.LiteralConst:
       return context.closure.literals.at(offset);
     case ContextVariable.LiteralVar:

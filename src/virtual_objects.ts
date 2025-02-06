@@ -1,6 +1,7 @@
 import type { Closure } from "./closures";
 import { invariant, RangeError } from "./errors";
 import { Dict } from "./generics";
+import type { VirtualMachine } from "./virtual_machine";
 
 export class VirtualObject {
   isNil = false;
@@ -12,6 +13,19 @@ export class VirtualObject {
 
   private vars: VirtualObject[] = [];
 
+  private vClassCached?: VirtualObject;
+
+  get vClass() {
+    if (this.vClassCached === undefined) {
+      this.vClassCached = this.vm.globalContext.at(this.classKey);
+    }
+    return this.vClassCached;
+  }
+
+  get varCount() {
+    return this.vClass.ivars.length;
+  }
+
   // (TODO:reflect) this should be an instance variable of class objects
   methodDict = Dict<Closure>();
 
@@ -20,23 +34,57 @@ export class VirtualObject {
    * @param ivars The names of the variables of my instances (assuming I'm a class)
    */
   constructor(
+    readonly vm: VirtualMachine,
     readonly classKey: string,
     readonly ivars: string[] = [],
   ) {}
 
-  setVar(id: number, value: VirtualObject) {
-    this.vars[id] = value;
-  }
-
-  getVar(id: number) {
+  checkVarId(id: number) {
     invariant(
-      id >= 0 && id < this.vars.length,
+      id >= 0 && id < this.varCount,
       RangeError,
       id,
       0,
-      this.vars.length - 1,
+      this.varCount - 1,
       `an index into my variables`,
     );
-    return this.vars[id];
+  }
+
+  setVar(id: number, value: VirtualObject) {
+    this.checkVarId(id);
+    this.vars[id] = value;
+  }
+
+  readVar(id: number) {
+    this.checkVarId(id);
+    return this.vars[id] ?? this.vm.asLiteral(undefined);
+  }
+
+  getVarId(name: string): number {
+    return this.vClass.ivars.indexOf(name);
+  }
+
+  readVarWithName(name: string) {
+    return this.readVar(this.getVarId(name));
+  }
+
+  setVarWithName(name: string, value: VirtualObject) {
+    this.setVar(this.getVarId(name), value);
+  }
+
+  /** (TODO:reflect) implement in interpreted language */
+  getMethod(selector: string) {
+    return this.vClass.getInstanceMethod(selector);
+  }
+
+  getInstanceMethod(selector: string): Closure | undefined {
+    if (selector in this.methodDict) {
+      return this.methodDict[selector];
+    } else {
+      const vSuperClass = this.readVarWithName("superClass");
+      if (!vSuperClass.isNil) {
+        return vSuperClass.getInstanceMethod(selector);
+      }
+    }
   }
 }

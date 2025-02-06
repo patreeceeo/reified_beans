@@ -8,17 +8,18 @@ describe("ContextValue", () => {
   describe("load", () => {
     const vm = new VirtualMachine();
     const closure = new Closure(4, 4, 4, new VirtualMachine());
-    const receiver = vm.asLiteral("receiver");
+    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+    const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
 
     vm.contextStack.push(context);
     closure.literals.put(3, vm.asLiteral("Object"));
     context.argsAndTemps.put(3, vm.asLiteral(42));
-    context.receiver.setVar(3, vm.asLiteral(true));
+    context.receiver.setVar(2, vm.asLiteral(true));
 
     test(ContextValue[ContextValue.ReceiverVar], () => {
-      const result = loadContextValue(ContextValue.ReceiverVar, 3, vm);
-      expect(result).toBe(context.receiver.getVar(3));
+      const result = loadContextValue(ContextValue.ReceiverVar, 2, vm);
+      expect(result).toBe(context.receiver.readVar(2));
     });
     test(ContextValue[ContextValue.TempVar], () => {
       const result = loadContextValue(ContextValue.TempVar, 3, vm);

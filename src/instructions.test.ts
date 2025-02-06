@@ -154,7 +154,8 @@ const additionalTests = {
   ) => {
     const vm = new VirtualMachine();
     const closure = new Closure(4, 4, 4, vm);
-    const receiver = vm.asLiteral("receiver");
+    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+    const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
 
     const emptyReceiver = vm.asLiteral("empty receiver");
@@ -163,7 +164,7 @@ const additionalTests = {
 
     closure.literals.put(3, vm.asLiteral("Object"));
     context.argsAndTemps.put(3, vm.asLiteral(42));
-    context.receiver.setVar(3, vm.asLiteral(true));
+    receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       vm.contextStack.push(context);
@@ -189,7 +190,8 @@ const additionalTests = {
   ) => {
     const vm = new VirtualMachine();
     const closure = new Closure(4, 4, 4, vm);
-    const receiver = vm.asLiteral("receiver");
+    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+    const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
     context.evalStack.push(vm.asLiteral("value"));
 
@@ -199,7 +201,7 @@ const additionalTests = {
 
     closure.literals.put(3, vm.asLiteral("Object"));
     context.argsAndTemps.put(3, vm.asLiteral(42));
-    context.receiver.setVar(3, vm.asLiteral(true));
+    context.receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       vm.contextStack.push(context);
@@ -240,7 +242,8 @@ const additionalTests = {
   ) => {
     const vm = new VirtualMachine();
     const closure = new Closure(4, 4, 4, vm);
-    const receiver = vm.asLiteral("receiver");
+    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+    const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
     const pushedValue = vm.asLiteral("value");
     context.evalStack.push(pushedValue);
@@ -251,7 +254,7 @@ const additionalTests = {
 
     closure.literals.put(3, vm.asLiteral("Object"));
     context.argsAndTemps.put(3, vm.asLiteral(42));
-    context.receiver.setVar(3, vm.asLiteral(true));
+    context.receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       vm.contextStack.push(context);
@@ -602,11 +605,11 @@ describe("Instructions", () => {
   testInstruction(instPushSpecialVal, [SpecialPushValue.NegativeOne]);
   testInstruction(instReturnSpecialVal, [SpecialReturnValue.Self]);
   // testInstruction(instReturnStackTopFrom, [StackTarget.ReceiverVar, 3]);
-  testInstruction(instPush, [ContextValue.ReceiverVar, 3]);
+  testInstruction(instPush, [ContextValue.ReceiverVar, 2]);
   testInstruction(instPush, [ContextValue.TempVar, 3]);
   testInstruction(instPush, [ContextValue.LiteralConst, 3]);
   testInstruction(instPush, [ContextValue.LiteralVar, 3]);
-  testInstruction(instStore, [ContextVariable.ReceiverVar, 3]);
+  testInstruction(instStore, [ContextVariable.ReceiverVar, 2]);
   testInstruction(instStore, [ContextVariable.LiteralVar, 3]);
   testInstruction(instStore, [ContextVariable.TempVar, 3]);
   testInstruction(instPopAndStore, [ContextVariable.LiteralVar, 3]);
