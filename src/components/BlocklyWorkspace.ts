@@ -1,21 +1,23 @@
-import * as Blockly from 'blockly';
-import {load, save} from 'src/serialization';
-import {toolbox} from 'src/toolbox';
-import {copyOffsetParentTransform} from '../htmlElement';
-import basicBlocks from 'src/blocks/basic';
-import functionBlocks from 'src/blocks/functions';
-import {Compiler} from 'src/compiler';
+import * as Blockly from "blockly";
+import { load, save } from "src/serialization";
+import { toolbox } from "src/toolbox";
+import { copyOffsetParentTransform } from "../htmlElement";
+import basicBlocks from "src/blocks/basic";
+import functionBlocks from "src/blocks/functions";
+import { Compiler } from "src/compiler";
 import {
   ContinuousToolbox,
   ContinuousFlyout,
   ContinuousMetrics,
 } from "@blockly/continuous-toolbox";
-import {unregisterProcedureBlocks} from 'src/procedures';
-import {WorkspaceAnalyzer} from 'src/workspace_analyzer';
-import {ScopeItemDropdownExtension} from 'src/extensions/scope_item_dropdown_extension';
+import { unregisterProcedureBlocks } from "src/procedures";
+import { WorkspaceAnalyzer } from "src/workspace_analyzer";
+import { ScopeItemDropdownExtension } from "src/extensions/scope_item_dropdown_extension";
 
-
-Blockly.Extensions.register('scope_item_dropdown_extension', ScopeItemDropdownExtension);
+Blockly.Extensions.register(
+  "scope_item_dropdown_extension",
+  ScopeItemDropdownExtension,
+);
 
 export class BlocklyWorkspace extends HTMLElement {
   private injectTarget?: HTMLElement;
@@ -25,7 +27,7 @@ export class BlocklyWorkspace extends HTMLElement {
   hasMeaningfulChanges = true;
 
   connectedCallback() {
-    this.injectTarget = this.querySelector('.injectTarget') as HTMLElement;
+    this.injectTarget = this.querySelector(".injectTarget") as HTMLElement;
 
     // We're overriding the default procedures blocks
     unregisterProcedureBlocks();
@@ -34,13 +36,15 @@ export class BlocklyWorkspace extends HTMLElement {
     Blockly.common.defineBlocks(basicBlocks);
     Blockly.common.defineBlocks(functionBlocks);
 
-    const ws = this.ws = Blockly.inject(this.injectTarget, {
+    const ws = (this.ws = Blockly.inject(this.injectTarget, {
       plugins: {
         toolbox: ContinuousToolbox,
         flyoutsVerticalToolbox: ContinuousFlyout,
         metricsManager: ContinuousMetrics,
       },
-      toolboxPosition: 'end', toolbox});
+      toolboxPosition: "end",
+      toolbox,
+    }));
 
     load(ws);
 
@@ -49,7 +53,7 @@ export class BlocklyWorkspace extends HTMLElement {
       // No need to save after one of these.
       if (!e.isUiEvent) {
         save(ws!);
-        if(e.type != Blockly.Events.FINISHED_LOADING && !ws.isDragging()) {
+        if (e.type != Blockly.Events.FINISHED_LOADING && !ws.isDragging()) {
           this.hasMeaningfulChanges = true;
           this.addCustomIcons();
         }
@@ -65,7 +69,6 @@ export class BlocklyWorkspace extends HTMLElement {
 
     this.adjustSize();
     this.addCustomIcons();
-
 
     this.compiler = new Compiler(ws);
   }
@@ -99,19 +102,16 @@ export class BlocklyWorkspace extends HTMLElement {
     //     icon = block.getIcon(VariableValueIcon.TYPE) as VariableValueIcon;
     //   }
     //   const code = getCodeForBlock(block, workspace);
-      // myInterpreter.appendCode(code);
-      // myInterpreter.run();
-      // const stack = myInterpreter.getStateStack();
-      // const state = stack[stack.length - 1];
-      // evaluate(code, scope)
-      // for(const {name} of getVariablesForBlock(block)) {
-        // const varVal = state.scope.object.properties[name];
-        // const varVal = scope.get(name);
-        // icon.bubbleText += `${name} = ${varVal}\n`;
-      // }
+    // myInterpreter.appendCode(code);
+    // myInterpreter.run();
+    // const stack = myInterpreter.getStateStack();
+    // const state = stack[stack.length - 1];
+    // evaluate(code, scope)
+    // for(const {name} of getVariablesForBlock(block)) {
+    // const varVal = state.scope.object.properties[name];
+    // const varVal = scope.get(name);
+    // icon.bubbleText += `${name} = ${varVal}\n`;
+    // }
     // }
   }
 }
-
-
-

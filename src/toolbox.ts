@@ -1,79 +1,78 @@
-
 export const toolbox = {
-  kind: 'categoryToolbox',
+  kind: "categoryToolbox",
   contents: [
     {
-      kind: 'category',
-      name: 'Controls',
-      categorystyle: 'controls_category',
+      kind: "category",
+      name: "Controls",
+      categorystyle: "controls_category",
       contents: [
         // {
         //   kind: 'block',
         //   type: 'procedures_defreturn',
         // },
         {
-          kind: 'block',
-          type: 'controls_begin_statement',
+          kind: "block",
+          type: "controls_begin_statement",
         },
         {
-          kind: 'block',
-          type: 'messages_any',
+          kind: "block",
+          type: "messages_any",
         },
       ],
     },
     {
-      kind: 'category',
-      name: 'Numbers',
+      kind: "category",
+      name: "Numbers",
       contents: [
         {
-          kind: 'block',
-          type: 'math_number',
+          kind: "block",
+          type: "math_number",
           fields: {
             NUM: 123,
           },
         },
         {
-          kind: 'block',
-          type: 'number_messages_binary',
+          kind: "block",
+          type: "number_messages_binary",
         },
       ],
     },
     {
-      kind: 'category',
-      name: 'Booleans',
+      kind: "category",
+      name: "Booleans",
       contents: [
         {
-          kind: 'block',
-          type: 'boolean_messages_ifTrue_ifFalse',
+          kind: "block",
+          type: "boolean_messages_ifTrue_ifFalse",
         },
       ],
     },
     {
-      kind: 'category',
-      name: 'Functions',
-      categorystyle: 'procedure_category',
+      kind: "category",
+      name: "Functions",
+      categorystyle: "procedure_category",
       contents: [
         {
-          kind: 'block',
-          type: 'procedures_defreturn',
+          kind: "block",
+          type: "procedures_defreturn",
         },
       ],
     },
     {
-      kind: 'category',
-      name: 'variables',
-      categorystyle: 'variable_category',
+      kind: "category",
+      name: "variables",
+      categorystyle: "variable_category",
       contents: [
         {
-          kind: 'block',
-          type: 'variables_get',
+          kind: "block",
+          type: "variables_get",
         },
         {
-          kind: 'block',
-          type: 'variables_set',
+          kind: "block",
+          type: "variables_set",
           fields: {
-            NAME: 'x',
-          }
+            NAME: "x",
+          },
         },
       ],
     },

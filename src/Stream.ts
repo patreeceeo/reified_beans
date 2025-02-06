@@ -11,11 +11,11 @@ export class Stream<T> {
     return {
       release: () => {
         this.observers.delete(observer);
-      }
+      },
     };
   }
   next(value: T): void {
-    for(const observer of this.observers) {
+    for (const observer of this.observers) {
       observer(value);
     }
   }

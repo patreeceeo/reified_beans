@@ -4,6 +4,40 @@ import MachineXRay from 'src/components/MachineXRay.astro';
 import Layout from 'src/layouts/Layout.astro';
 import Split from 'src/layouts/Split.astro';
 
+/*
+Smalltalk is a vision of the computer as a medium of self expression. ... A humanistic vision of the computer as something everyone could use and benefit from. If you are going to have a medium for self expression, programability is key because unless you can actually make the system behave as you want you are a slave to what's on the machine. So it's really vital, and so language comes to the for because it's through language that you express yourself to the machine.
+
+The thing that is most radical, I think, about the Smalltalk Vision, and the thing which much of the instustry misses and has left behind, except maybe at the GUI level, is that the [Smalltalk] language design follows from a human centric design; a vision of, a humanist vision of what we might do to make peoples lives better, more enjoyable, more productive; and from that starting point a very very radical and original language, and a very very radical and original set of implementation technologies came along."
+- Elliot Miranda, Cincom
+*/
+
+/*
+
+Workflow:
+- Create/edit a class:
+  - Enter a name and optionally a description
+- Create/edit a variable:
+  - Enter a name and optionally a type and default value
+  - Decide if it's an instance variable or a global variable. If in the process of editing a method, it can also be an argument or a temporary variable
+    - If it's an instance variable, you can choose multiple classes. Choose a metaclass to make it a class variable.
+- Create/edit a method:
+  - Create/edit a selector
+  - Enter a category, and description.
+  - Optionally add temporary variables.
+  - Choose which classes it belongs to. Choose a metaclass to make it a class method.
+  - Use the blockly workspace to create the method body. The instance variables available will be the intersection of those of the classes the method belongs to.
+- Create/edit a selector:
+  - Build it using blocks that represent the parts of the selector:
+    - keywords
+    - arguments
+- Query objects that respond to a message:
+  - Create a collection of objects
+  - Send it a message that takes a selector as an argument
+  - Responds with the objects that respond to that message
+
+
+
+
 // TODO:
 // - Test suite
 // - Dev tools

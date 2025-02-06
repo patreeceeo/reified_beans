@@ -1,121 +1,121 @@
-import * as Blockly from 'blockly/core';
+import * as Blockly from "blockly/core";
 export default Blockly.common.createBlockDefinitionsFromJsonArray([
   {
-    type: 'math_number',
-    message0: '%1 %2',
+    type: "math_number",
+    message0: "%1 %2",
     args0: [
       {
-        type: 'field_number',
-        name: 'VALUE',
+        type: "field_number",
+        name: "VALUE",
         value: 0,
       },
       {
-        type: 'input_value',
-        name: 'NEXT',
+        type: "input_value",
+        name: "NEXT",
       },
     ],
-    output: 'Number',
+    output: "Number",
   },
   {
-    type: 'controls_begin_statement',
-    message0: '%1',
+    type: "controls_begin_statement",
+    message0: "%1",
     args0: [
       {
-        type: 'input_value',
-        name: 'NEXT',
+        type: "input_value",
+        name: "NEXT",
       },
     ],
     previousStatement: null,
     nextStatement: null,
   },
   {
-    type: 'number_messages_binary',
-    message0: '%1 %2',
+    type: "number_messages_binary",
+    message0: "%1 %2",
     args0: [
       {
-        "type": "field_dropdown",
-        "name": "OP",
-        "options": [
-          [ ">", ">" ],
-          [ "<", "<" ],
-          [ "≤", "<=" ],
-          [ "≥", ">=" ],
-          [ "+", "+" ],
-          [ "-", "-" ],
-          [ "*", "*" ],
-          [ "/", "/" ],
-          [ "%", "%" ],
-          [ "=", "==" ],
-          [ "≠", "!=" ]
-        ]
+        type: "field_dropdown",
+        name: "OP",
+        options: [
+          [">", ">"],
+          ["<", "<"],
+          ["≤", "<="],
+          ["≥", ">="],
+          ["+", "+"],
+          ["-", "-"],
+          ["*", "*"],
+          ["/", "/"],
+          ["%", "%"],
+          ["=", "=="],
+          ["≠", "!="],
+        ],
       },
       {
-        type: 'input_value',
-        name: 'NEXT',
+        type: "input_value",
+        name: "NEXT",
       },
     ],
     output: null,
   },
   {
-    type: 'boolean_messages_ifTrue_ifFalse',
-    message0: 'ifTrue %1 ifFalse %2',
+    type: "boolean_messages_ifTrue_ifFalse",
+    message0: "ifTrue %1 ifFalse %2",
     args0: [
       {
-        type: 'input_value',
-        name: 'IF_TRUE',
+        type: "input_value",
+        name: "IF_TRUE",
       },
       {
-        type: 'input_value',
-        name: 'IF_FALSE',
+        type: "input_value",
+        name: "IF_FALSE",
       },
     ],
-    output: 'Boolean',
+    output: "Boolean",
   },
   {
-    type: 'messages_any',
-    message0: '%1 %2',
+    type: "messages_any",
+    message0: "%1 %2",
     args0: [
       {
-        type: 'field_input',
-        name: 'MESSAGE',
+        type: "field_input",
+        name: "MESSAGE",
       },
       {
-        type: 'input_value',
-        name: 'NEXT',
+        type: "input_value",
+        name: "NEXT",
       },
     ],
     output: null,
   },
   // TODO use different blocks for getting classes and local variables?
   {
-    type: 'variables_get',
-    message0: 'get %1 %2',
+    type: "variables_get",
+    message0: "get %1 %2",
     args0: [
       {
-        type: 'input_dummy',
-        name: 'SCOPE_ITEM',
+        type: "input_dummy",
+        name: "SCOPE_ITEM",
       },
       {
-        type: 'input_value',
-        name: 'NEXT',
+        type: "input_value",
+        name: "NEXT",
       },
     ],
     output: null,
-    extensions: ['scope_item_dropdown_extension'],
+    extensions: ["scope_item_dropdown_extension"],
   },
   {
-    type: 'variables_set',
-    message0: 'set %1 to %2',
+    type: "variables_set",
+    message0: "set %1 to %2",
     args0: [
       {
-        type: 'field_input',
-        name: 'NAME',
+        type: "field_input",
+        name: "NAME",
       },
       {
-        type: 'input_value',
-        name: 'NEXT',
+        type: "input_value",
+        name: "NEXT",
       },
     ],
     output: null,
-  }
-])
+  },
+]);
