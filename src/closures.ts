@@ -1,7 +1,8 @@
 import { Validator } from "./errors";
 import { FixedLengthArray } from "./generics";
+import type { InstructionPointer } from "./instructions";
 import type { VirtualMachine } from "./virtual_machine";
-import { VirtualObject } from "./virtual_objects";
+import { VirtualObject, type LiteralJsValue } from "./virtual_objects";
 
 const literalValidator = new Validator<VirtualObject>(
   "a literal",
@@ -15,9 +16,18 @@ const literalValidator = new Validator<VirtualObject>(
     );
   },
 );
-/**(TODO:dx) Use builder pattern */
 
-/** (TODO:reflect) Use a VirtualObject instead */
+export interface ClosureDescriptionJs {
+  argCount: number;
+  tempCount: number;
+  literals: LiteralJsValue[];
+  getInstructions?: (pointer: InstructionPointer) => void;
+}
+
+/**
+ * Most of this time, this should not be used directly.
+ * Use VirtualMachine#createClosure instead.
+ * (TODO:reflect) Use a VirtualObject instead */
 export class Closure {
   literals: FixedLengthArray<VirtualObject>;
   constructor(

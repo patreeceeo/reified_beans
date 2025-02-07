@@ -17,7 +17,6 @@ import {
 } from "./instructions";
 import { VirtualMachine } from "./virtual_machine";
 import { ClosureContext } from "./contexts";
-import { Closure } from "./closures";
 import {
   reifySpecialPushValue,
   reifySpecialReturnValue,
@@ -29,9 +28,24 @@ import {
   ContextValue,
   ContextVariable,
 } from "./context_value";
+import type { ClosureDescriptionJs } from "./closures";
 
 const array = new ArrayBuffer(4);
 const pointer = new InstructionPointer(array, 0, 4);
+const emptyClosureDescription: ClosureDescriptionJs = {
+  argCount: 0,
+  tempCount: 0,
+  literals: [],
+};
+
+function fillInstructionBuffer(
+  pointer: InstructionPointer,
+  byteLength: number,
+) {
+  for (let i = 0; i < byteLength / 2; i++) {
+    instPop.writeWith(pointer);
+  }
+}
 
 const additionalTests = {
   // [instPopAndStoreReceiverVar.type]: ([receiverVarOffset]: Parameters<typeof instPopAndStoreReceiverVar.explain>) => {
@@ -97,7 +111,10 @@ const additionalTests = {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
+      const context = new ClosureContext(
+        receiver,
+        vm.createClosure(emptyClosureDescription),
+      );
       vm.contextStack.push(context);
 
       inst.do(vm, specialValueId);
@@ -120,8 +137,14 @@ const additionalTests = {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const receiver = vm.asLiteral("receiver");
-      const context1 = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
-      const context2 = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
+      const context1 = new ClosureContext(
+        receiver,
+        vm.createClosure(emptyClosureDescription),
+      );
+      const context2 = new ClosureContext(
+        receiver,
+        vm.createClosure(emptyClosureDescription),
+      );
       vm.contextStack.push(context1);
       vm.contextStack.push(context2);
 
@@ -142,7 +165,10 @@ const additionalTests = {
     test("Fail if there's only one context", () => {
       const vm = new VirtualMachine();
       const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
+      const context = new ClosureContext(
+        receiver,
+        vm.createClosure(emptyClosureDescription),
+      );
       vm.contextStack.push(context);
       expect(() => inst.do(vm, specialValueId)).toThrow();
     });
@@ -153,13 +179,17 @@ const additionalTests = {
     [source, offset]: Parameters<typeof instPush.explain>,
   ) => {
     const vm = new VirtualMachine();
-    const closure = new Closure(4, 4, 4, vm);
+    const closure = vm.createClosure({
+      argCount: 4,
+      tempCount: 4,
+      literals: [0, 0, 0, 0],
+    });
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
     const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
 
     const emptyReceiver = vm.asLiteral("empty receiver");
-    const emptyClosure = new Closure(0, 0, 0, vm);
+    const emptyClosure = vm.createClosure(emptyClosureDescription);
     const emptyContext = new ClosureContext(emptyReceiver, emptyClosure);
 
     closure.literals.put(3, vm.asLiteral("Object"));
@@ -189,14 +219,18 @@ const additionalTests = {
     [target, offset]: Parameters<typeof instStore.explain>,
   ) => {
     const vm = new VirtualMachine();
-    const closure = new Closure(4, 4, 4, vm);
+    const closure = vm.createClosure({
+      argCount: 4,
+      tempCount: 4,
+      literals: [0, 0, 0, 0],
+    });
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
     const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
     context.evalStack.push(vm.asLiteral("value"));
 
     const emptyReceiver = vm.asLiteral("empty receiver");
-    const emptyClosure = new Closure(0, 0, 0, vm);
+    const emptyClosure = vm.createClosure(emptyClosureDescription);
     const emptyContext = new ClosureContext(emptyReceiver, emptyClosure);
 
     closure.literals.put(3, vm.asLiteral("Object"));
@@ -241,7 +275,11 @@ const additionalTests = {
     [target, offset]: Parameters<typeof instPopAndStore.explain>,
   ) => {
     const vm = new VirtualMachine();
-    const closure = new Closure(4, 4, 4, vm);
+    const closure = vm.createClosure({
+      argCount: 4,
+      tempCount: 4,
+      literals: [0, 0, 0, 0],
+    });
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
     const receiver = vm.createObject("TestObject");
     const context = new ClosureContext(receiver, closure);
@@ -249,7 +287,7 @@ const additionalTests = {
     context.evalStack.push(pushedValue);
 
     const emptyReceiver = vm.asLiteral("empty receiver");
-    const emptyClosure = new Closure(0, 0, 0, vm);
+    const emptyClosure = vm.createClosure(emptyClosureDescription);
     const emptyContext = new ClosureContext(emptyReceiver, emptyClosure);
 
     closure.literals.put(3, vm.asLiteral("Object"));
@@ -290,7 +328,11 @@ const additionalTests = {
     >,
   ) => {
     const vm = new VirtualMachine();
-    const closure = new Closure(4, 4, 4, vm);
+    const closure = vm.createClosure({
+      argCount: 4,
+      tempCount: 4,
+      literals: [0, 0],
+    });
     const receiver = vm.asLiteral("receiver");
     const context = new ClosureContext(receiver, closure);
 
@@ -346,7 +388,11 @@ const additionalTests = {
   [instPop.type]: (inst: typeof instPop) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
       context.evalStack.push(vm.asLiteral("value"));
@@ -365,7 +411,10 @@ const additionalTests = {
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
       const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
+      const context = new ClosureContext(
+        receiver,
+        vm.createClosure(emptyClosureDescription),
+      );
       vm.contextStack.push(context);
       expect(() => inst.do(vm)).toThrow();
     });
@@ -374,7 +423,11 @@ const additionalTests = {
   [instDuplicate.type]: (inst: typeof instDuplicate) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
       context.evalStack.push(vm.asLiteral("value"));
@@ -394,7 +447,10 @@ const additionalTests = {
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
       const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
+      const context = new ClosureContext(
+        receiver,
+        vm.createClosure(emptyClosureDescription),
+      );
       vm.contextStack.push(context);
       expect(() => inst.do(vm)).toThrow();
     });
@@ -406,7 +462,14 @@ const additionalTests = {
   ) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -425,7 +488,11 @@ const additionalTests = {
 
     test("Fail if the offset is out of bounds", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 0);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
       vm.contextStack.push(context);
@@ -440,7 +507,14 @@ const additionalTests = {
   ) => {
     test("Do it successfully (with jump)", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -455,7 +529,14 @@ const additionalTests = {
 
     test("Do it successfully (without jump)", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -470,7 +551,11 @@ const additionalTests = {
 
     test("Fail if the offset is out of bounds", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 0);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -487,7 +572,14 @@ const additionalTests = {
 
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
       vm.contextStack.push(context);
@@ -502,7 +594,14 @@ const additionalTests = {
   ) => {
     test("Do it successfully (with jump)", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -517,7 +616,14 @@ const additionalTests = {
 
     test("Do it successfully (without jump)", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -532,7 +638,11 @@ const additionalTests = {
 
     test("Fail if the offset is out of bounds", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 0);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
 
@@ -549,7 +659,14 @@ const additionalTests = {
 
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
-      const closure = new Closure(4, 4, 4, vm, 0, 12);
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [],
+        getInstructions(pointer) {
+          fillInstructionBuffer(pointer, 12);
+        },
+      });
       const receiver = vm.asLiteral("receiver");
       const context = new ClosureContext(receiver, closure);
       vm.contextStack.push(context);

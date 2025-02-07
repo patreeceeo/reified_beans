@@ -3,6 +3,8 @@ import { invariant, RangeError } from "./errors";
 import { Dict } from "./generics";
 import type { VirtualMachine } from "./virtual_machine";
 
+export type LiteralJsValue = string | number | boolean | undefined;
+
 export class VirtualObject {
   isNil = false;
   isTrue = false;

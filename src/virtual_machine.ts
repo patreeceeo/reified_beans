@@ -1,4 +1,4 @@
-import type { Closure } from "./closures";
+import { Closure, type ClosureDescriptionJs } from "./closures";
 import { ClosureContext, GlobalContext } from "./contexts";
 import {
   invariant,
@@ -7,6 +7,7 @@ import {
   StackUnderflowError,
 } from "./errors";
 import { Dict, FixedLengthArray, Stack } from "./generics";
+import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
 import { VirtualObject } from "./virtual_objects";
 
@@ -88,6 +89,11 @@ export class VirtualMachine {
   contextStack = Stack<ClosureContext>();
 
   instructionBuffer = new ArrayBuffer(MAX_INSTRUCTION_BYTES);
+  instructionPointer = new InstructionPointer(
+    this.instructionBuffer,
+    0,
+    MAX_INSTRUCTION_BYTES,
+  );
 
   constructor() {
     this.initializeGlobalContext();
@@ -246,6 +252,31 @@ export class VirtualMachine {
     for (let index = 0; index < closure.argCount; index++) {
       args.put(index, sender.evalStack.pop()!);
     }
+  }
+
+  createClosure(description: ClosureDescriptionJs): Closure {
+    const byteOffset = this.instructionPointer.byteOffset;
+
+    if (description.getInstructions) {
+      description.getInstructions(this.instructionPointer);
+    }
+
+    const byteLength = this.instructionPointer.byteOffset - byteOffset;
+
+    const closure = new Closure(
+      description.argCount,
+      description.tempCount,
+      description.literals.length,
+      this,
+      byteOffset,
+      byteLength,
+    );
+
+    for (const [i, value] of description.literals.entries()) {
+      closure.literals.put(i, this.asLiteral(value));
+    }
+
+    return closure;
   }
 
   /** (TODO:reflect) implement in interpreted language? */
