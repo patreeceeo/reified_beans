@@ -3,7 +3,8 @@ import { invariant, RangeError } from "./errors";
 import { Dict } from "./generics";
 import type { VirtualMachine } from "./virtual_machine";
 
-export type LiteralJsValue = string | number | boolean | undefined;
+export type PrimitiveJsValue = string | number | boolean | undefined;
+export type LiteralJsValue = PrimitiveJsValue | LiteralJsValue[];
 
 export class VirtualObject {
   isNil = false;
@@ -24,8 +25,12 @@ export class VirtualObject {
     return this.vClassCached;
   }
 
-  get varCount() {
+  get namedVarCount() {
     return this.vClass.ivars.length;
+  }
+
+  get varCount() {
+    return this.namedVarCount + (this.length ?? 0);
   }
 
   // (TODO:reflect) this should be an instance variable of class objects
@@ -34,11 +39,13 @@ export class VirtualObject {
   /**
    * @param classKey The unique name of my class
    * @param ivars The names of the variables of my instances (assuming I'm a class)
+   * @param instanceLength For indexable objects, the number of elements in the object
    */
   constructor(
     readonly vm: VirtualMachine,
     readonly classKey: string,
     readonly ivars: string[] = [],
+    readonly length: number | undefined = undefined,
   ) {}
 
   checkVarId(id: number) {
@@ -57,9 +64,17 @@ export class VirtualObject {
     this.vars[id] = value;
   }
 
+  setIndex(index: number, value: VirtualObject) {
+    this.setVar(index + this.namedVarCount, value);
+  }
+
   readVar(id: number) {
     this.checkVarId(id);
     return this.vars[id] ?? this.vm.asLiteral(undefined);
+  }
+
+  readIndex(index: number) {
+    return this.readVar(index + this.namedVarCount);
   }
 
   getVarId(name: string): number {

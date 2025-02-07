@@ -18,9 +18,9 @@ const literalValidator = new Validator<VirtualObject>(
 );
 
 export interface ClosureDescriptionJs {
-  argCount: number;
-  tempCount: number;
-  literals: LiteralJsValue[];
+  argCount?: number;
+  tempCount?: number;
+  literals?: LiteralJsValue[];
   getInstructions?: (pointer: InstructionPointer) => void;
 }
 

@@ -32,11 +32,7 @@ import type { ClosureDescriptionJs } from "./closures";
 
 const array = new ArrayBuffer(4);
 const pointer = new InstructionPointer(array, 0, 4);
-const emptyClosureDescription: ClosureDescriptionJs = {
-  argCount: 0,
-  tempCount: 0,
-  literals: [],
-};
+const emptyClosureDescription: ClosureDescriptionJs = {};
 
 function fillInstructionBuffer(
   pointer: InstructionPointer,

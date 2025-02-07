@@ -70,6 +70,32 @@ primitiveMethodDict["-"] = {
   },
 };
 
+primitiveMethodDict["at:"] = {
+  attempt(vm: VirtualMachine): boolean {
+    const context = vm.contextStack.peek();
+    invariant(context, StackUnderflowError, "context");
+    const { evalStack } = context;
+    const receiver = evalStack.pop();
+    const arg = evalStack.pop();
+
+    invariant(receiver, StackUnderflowError, "evaluation");
+    invariant(arg, StackUnderflowError, "evaluation");
+
+    if (
+      typeof arg.primitiveValue !== "number" ||
+      typeof receiver.length !== "number"
+    ) {
+      evalStack.push(receiver);
+      evalStack.push(arg);
+      return false;
+    }
+
+    const value = receiver.readIndex(arg.primitiveValue);
+    context.evalStack.push(value);
+    return true;
+  },
+};
+
 function loadArithmeticOpArgs(
   context: ClosureContext,
   target: [number, number],

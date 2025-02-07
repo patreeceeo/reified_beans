@@ -9,7 +9,7 @@ import {
 import { Dict, FixedLengthArray, Stack } from "./generics";
 import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
-import { VirtualObject } from "./virtual_objects";
+import { VirtualObject, type LiteralJsValue } from "./virtual_objects";
 import stdClassLibrary from "./std_class_library";
 
 const MAX_INSTRUCTION_BYTES = 2 ** 20; // 1MB
@@ -37,11 +37,11 @@ export class VirtualMachine {
   internedStrings = Dict<VirtualObject>();
   internedNumbers = [] as VirtualObject[];
 
-  createObject(classKey: string, ivars: string[] = []) {
-    return new VirtualObject(this, classKey, ivars);
+  createObject(classKey: string, ivars: string[] = [], length?: number) {
+    return new VirtualObject(this, classKey, ivars, length);
   }
 
-  asLiteral(value: string | number | boolean | undefined) {
+  asLiteral(value: LiteralJsValue) {
     const classKey = this.getLiteralClassName(value);
     switch (classKey) {
       case "String":
@@ -70,6 +70,13 @@ export class VirtualMachine {
         return this.globalContext.at("true");
       case "False":
         return this.globalContext.at("false");
+      case "Array":
+        invariant(Array.isArray(value), TypeError, "Array", value);
+        const vArray = this.createObject(classKey, [], value.length);
+        for (let i = 0; i < value.length; i++) {
+          vArray.setVar(i, this.asLiteral(value[i]));
+        }
+        return vArray;
       default:
         raise(
           TypeError,
@@ -79,7 +86,7 @@ export class VirtualMachine {
     }
   }
 
-  getLiteralClassName(value: string | number | boolean | undefined) {
+  getLiteralClassName(value: LiteralJsValue) {
     if (value === true) {
       return "True";
     } else if (value === false) {
@@ -92,6 +99,9 @@ export class VirtualMachine {
           return "Number";
         case "undefined":
           return "UndefinedObject";
+        case "object":
+          invariant(Array.isArray(value), TypeError, "Array", value);
+          return "Array";
         default:
           raise(
             TypeError,
@@ -120,15 +130,18 @@ export class VirtualMachine {
     }
 
     for (const cls of stdClassLibrary) {
-      this.globalContext
-        .at(cls.name)
-        .setVarWithName("className", this.asLiteral(cls.name));
-      this.globalContext
-        .at(cls.name)
-        .setVarWithName("superClass", this.globalContext.at(cls.superClass));
-      this.globalContext
-        .at(cls.name)
-        .setVarWithName("classComment", this.asLiteral(cls.classComment));
+      const vClass = this.globalContext.at(cls.name);
+      vClass.setVarWithName("className", this.asLiteral(cls.name));
+      vClass.setVarWithName(
+        "superClass",
+        this.globalContext.at(cls.superClass),
+      );
+      vClass.setVarWithName("classComment", this.asLiteral(cls.classComment));
+
+      for (const [selector, description] of Object.entries(cls.methodDict)) {
+        const closure = this.createClosure(description);
+        vClass.methodDict[selector] = closure;
+      }
     }
   }
 
@@ -139,7 +152,7 @@ export class VirtualMachine {
   ) {
     const superClass = this.globalContext.at(superClassName);
     const ivars = [...superClass.ivars, ...addlIvars];
-    const vClass = new VirtualObject(this, "Class", ivars);
+    const vClass = this.createObject("Class", ivars);
     this.globalContext.put(className, vClass);
   }
 
@@ -185,7 +198,7 @@ export class VirtualMachine {
     }
   }
 
-  createClosure(description: ClosureDescriptionJs): Closure {
+  createClosure(description: ClosureDescriptionJs = {}): Closure {
     const byteOffset = this.instructionPointer.byteOffset;
 
     if (description.getInstructions) {
@@ -194,16 +207,18 @@ export class VirtualMachine {
 
     const byteLength = this.instructionPointer.byteOffset - byteOffset;
 
+    const literals = description.literals ?? [];
+
     const closure = new Closure(
-      description.argCount,
-      description.tempCount,
-      description.literals.length,
+      description.argCount ?? 0,
+      description.tempCount ?? 0,
+      literals.length,
       this,
       byteOffset,
       byteLength,
     );
 
-    for (const [i, value] of description.literals.entries()) {
+    for (const [i, value] of literals.entries()) {
       closure.literals.put(i, this.asLiteral(value));
     }
 
