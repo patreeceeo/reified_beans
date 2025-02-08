@@ -90,6 +90,14 @@ const dFalse = {
   methodDict: {},
 };
 
+const dNumber = {
+  name: "Number",
+  superClass: "Object",
+  ivars: [],
+  classComment: "I am the parent class of all classes that represent numbers.",
+  methodDict: {},
+};
+
 const dString = {
   name: "String",
   superClass: "Object",
@@ -128,6 +136,7 @@ const classDescriptions = [
   dBoolean,
   dTrue,
   dFalse,
+  dNumber,
   dString,
   dArray,
 ] as ClassDescription[];

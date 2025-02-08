@@ -37,8 +37,8 @@ export class VirtualMachine {
   internedStrings = Dict<VirtualObject>();
   internedNumbers = [] as VirtualObject[];
 
-  createObject(classKey: string, ivars: string[] = [], length?: number) {
-    return new VirtualObject(this, classKey, ivars, length);
+  createObject(classKey: string, ivars: string[] = []) {
+    return new VirtualObject(this, classKey, ivars);
   }
 
   asLiteral(value: LiteralJsValue) {
@@ -72,9 +72,9 @@ export class VirtualMachine {
         return this.globalContext.at("false");
       case "Array":
         invariant(Array.isArray(value), TypeError, "Array", value);
-        const vArray = this.createObject(classKey, [], value.length);
+        const vArray = this.createObject(classKey, []);
         for (let i = 0; i < value.length; i++) {
-          vArray.setVar(i, this.asLiteral(value[i]));
+          vArray.setIndex(i, this.asLiteral(value[i]));
         }
         return vArray;
       default:
@@ -171,7 +171,7 @@ export class VirtualMachine {
     }
 
     // try non-primative method
-    const closure = this.peekNextReceiver().getInstanceMethod(selector);
+    const closure = this.peekNextReceiver().getMethod(selector);
     if (closure !== undefined) {
       this.invokeAsMethod(closure);
     } else {
@@ -183,7 +183,10 @@ export class VirtualMachine {
   send(selector: string) {
     this.basicSend(selector, () => {
       this.basicSend("doesNotUnderstand:", () => {
-        raise(NotImplementedError, this.peekNextReceiver().classKey, selector);
+        const nextReceiver = this.peekNextReceiver();
+        throw new Error(
+          `${nextReceiver.classKey} instances do not understand #${selector}`,
+        );
       });
     });
   }

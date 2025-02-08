@@ -1,5 +1,5 @@
 import type { Closure } from "./closures";
-import { invariant, RangeError } from "./errors";
+import { BindingError, invariant, RangeError } from "./errors";
 import { Dict } from "./generics";
 import type { VirtualMachine } from "./virtual_machine";
 
@@ -30,7 +30,7 @@ export class VirtualObject {
   }
 
   get varCount() {
-    return this.namedVarCount + (this.length ?? 0);
+    return this.vars.length;
   }
 
   // (TODO:reflect) this should be an instance variable of class objects
@@ -45,12 +45,11 @@ export class VirtualObject {
     readonly vm: VirtualMachine,
     readonly classKey: string,
     readonly ivars: string[] = [],
-    readonly length: number | undefined = undefined,
   ) {}
 
   checkVarId(id: number) {
     invariant(
-      id >= 0 && id < this.varCount,
+      id >= 0 && id < this.namedVarCount,
       RangeError,
       id,
       0,
@@ -59,22 +58,22 @@ export class VirtualObject {
     );
   }
 
-  setVar(id: number, value: VirtualObject) {
-    this.checkVarId(id);
+  setVar(id: number, value: VirtualObject, checkId = true) {
+    checkId && this.checkVarId(id);
     this.vars[id] = value;
   }
 
   setIndex(index: number, value: VirtualObject) {
-    this.setVar(index + this.namedVarCount, value);
+    this.setVar(index, value, false);
   }
 
-  readVar(id: number) {
-    this.checkVarId(id);
+  readVar(id: number, checkId = true) {
+    checkId && this.checkVarId(id);
     return this.vars[id] ?? this.vm.asLiteral(undefined);
   }
 
   readIndex(index: number) {
-    return this.readVar(index + this.namedVarCount);
+    return this.readVar(index, false);
   }
 
   getVarId(name: string): number {
@@ -82,6 +81,8 @@ export class VirtualObject {
   }
 
   readVarWithName(name: string) {
+    const varId = this.getVarId(name);
+    invariant(varId >= 0, BindingError, this.classKey, name);
     return this.readVar(this.getVarId(name));
   }
 

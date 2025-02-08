@@ -20,8 +20,11 @@ export function invariant<
 
 export class BindingError extends Error {
   searchPath: string[] = [];
-  constructor(readonly key: string) {
-    super(`I don't know about anything called ${key}.`);
+  constructor(
+    readonly contextName: string,
+    readonly key: string,
+  ) {
+    super(`I (${contextName}) don't know about anything called ${key}.`);
   }
 }
 

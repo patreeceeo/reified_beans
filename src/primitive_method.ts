@@ -81,10 +81,7 @@ primitiveMethodDict["at:"] = {
     invariant(receiver, StackUnderflowError, "evaluation");
     invariant(arg, StackUnderflowError, "evaluation");
 
-    if (
-      typeof arg.primitiveValue !== "number" ||
-      typeof receiver.length !== "number"
-    ) {
+    if (typeof arg.primitiveValue !== "number") {
       evalStack.push(receiver);
       evalStack.push(arg);
       return false;
