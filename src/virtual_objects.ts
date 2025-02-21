@@ -15,6 +15,7 @@ export class VirtualObject {
   isFalse = false;
 
   private vClassCached?: VirtualObject;
+  private vNilCached?: VirtualObject;
   private vars: VirtualObject[] = [];
   private _primitiveValue: AnyPrimitiveJsValue = undefined;
 
@@ -23,6 +24,13 @@ export class VirtualObject {
       this.vClassCached = this.vm.globalContext.at(this.classKey);
     }
     return this.vClassCached;
+  }
+
+  get vNil() {
+    if (this.vNilCached === undefined) {
+      this.vNilCached = this.vm.asLiteral(undefined);
+    }
+    return this.vNilCached;
   }
 
   get primitiveValue() {
@@ -62,7 +70,6 @@ export class VirtualObject {
     } else {
       this._primitiveValue = literalValue;
     }
-    // TODO initialize vars to `nil`
   }
 
   checkVarId(id: number) {
@@ -87,7 +94,7 @@ export class VirtualObject {
 
   readVar(id: number, checkId = true) {
     checkId && this.checkVarId(id);
-    return this.vars[id] ?? this.vm.asLiteral(undefined);
+    return this.vars[id] ?? this.vNil;
   }
 
   readIndex<PrimitiveType = AnyLiteralJsValue>(
