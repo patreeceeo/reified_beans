@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { VirtualMachine } from "./virtual_machine";
-import { ClosureContext } from "./contexts";
+import { runtimeTypeNotNil } from "./runtime_type_checks";
 
 describe("Standard Class Library", () => {
   describe("Array", () => {
@@ -9,15 +9,17 @@ describe("Standard Class Library", () => {
       const array = vm.asLiteral([86, 79, 305]);
       const closure = vm.createClosure();
       const receiver = vm.asLiteral(undefined);
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(receiver, closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
       vm.contextStack.push(context);
-      context.evalStack.push(vm.asLiteral(2));
-      context.evalStack.push(array);
+
+      evalStack.stackPush(vm.asLiteral(2));
+      evalStack.stackPush(array);
 
       vm.send("at:");
 
-      expect(context.evalStack.peek()?.primitiveValue).toEqual(305);
+      expect(evalStack.stackTop?.primitiveValue).toEqual(305);
     });
   });
 });

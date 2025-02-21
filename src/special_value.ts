@@ -1,6 +1,9 @@
 import { invariant, StackUnderflowError } from "./errors";
+import { runtimeTypeNotNil } from "./runtime_type_checks";
 import type { VirtualMachine } from "./virtual_machine";
 import type { VirtualObject } from "./virtual_objects";
+
+// TODO define function that maps SpecialPushValue to SpecialReturnValue, then use that to call reifySpecialPushValue from reifySpecialReturnValue
 
 export enum SpecialPushValue {
   Self,
@@ -28,7 +31,7 @@ export function reifySpecialPushValue(
     case SpecialPushValue.Self:
       const context = vm.contextStack.peek();
       invariant(context, StackUnderflowError, "context");
-      return context.receiver;
+      return context.readVarWithName("receiver", runtimeTypeNotNil);
     case SpecialPushValue.True:
       return vm.asLiteral(true);
     case SpecialPushValue.False:
@@ -54,7 +57,7 @@ export function reifySpecialReturnValue(
     case SpecialReturnValue.Self:
       const context = vm.contextStack.peek();
       invariant(context, StackUnderflowError, "context");
-      return context.receiver;
+      return context.readVarWithName("receiver", runtimeTypeNotNil);
     case SpecialReturnValue.True:
       return vm.asLiteral(true);
     case SpecialReturnValue.False:

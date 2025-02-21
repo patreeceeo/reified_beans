@@ -20,6 +20,11 @@ import {
   SpecialReturnValue,
 } from "./special_value";
 import type { VirtualMachine } from "./virtual_machine";
+import {
+  runtimeTypeNotNil,
+  runtimeTypePositiveNumber,
+} from "./runtime_type_checks";
+import type { VirtualObject } from "./virtual_objects";
 
 const enum InstructionType {
   POP_AND_STORE_RECEIVER_VAR = 96,
@@ -140,7 +145,8 @@ export const instPushSpecialVal: Instruction<[SpecialPushValue]> = {
     const object = reifySpecialPushValue(value, machine);
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    context.evalStack.push(object);
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    evalStack.stackPush(object);
   },
 };
 
@@ -170,7 +176,8 @@ export const instReturnSpecialVal: Instruction<[SpecialReturnValue]> = {
     machine.contextStack.pop();
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    context.evalStack.push(object);
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    evalStack.stackPush(object);
   },
 };
 
@@ -228,7 +235,8 @@ export const instPush: Instruction<[ContextValue, number]> & {
     const object = loadContextValue(source, offset, machine);
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    context.evalStack.push(object);
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    evalStack.stackPush(object);
   },
 };
 
@@ -266,7 +274,8 @@ export const instStore: Instruction<[ContextVariable, number]> & {
   do(machine, target, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const object = context.evalStack.peek();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const object = evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     storeContextValue(target, offset, machine, object);
   },
@@ -306,7 +315,8 @@ export const instPopAndStore: Instruction<[ContextVariable, number]> & {
   do(machine, target, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const object = context.evalStack.pop();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const object = evalStack.stackPop();
     invariant(object, StackUnderflowError, "evaluation");
     storeContextValue(target, offset, machine, object);
   },
@@ -390,14 +400,17 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
   do(machine, selectorIndex, numArgs) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const { evalStack } = context;
-    const evalStackDepthInitial = evalStack.length;
+    // const { evalStack } = context;
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStackDepthInitial = evalStack.stackDepth;
     invariant(
       evalStackDepthInitial >= numArgs + 1,
       StackUnderflowError,
       "evaluation",
     );
-    const { primitiveValue } = context.closure.literals.at(selectorIndex);
+    const closure = context.readVarWithName("closure", runtimeTypeNotNil);
+    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+    const { primitiveValue } = literals.readIndex(selectorIndex);
     invariant(
       typeof primitiveValue === "string",
       TypeError,
@@ -406,10 +419,10 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
     );
     machine.send(primitiveValue);
     invariant(
-      evalStack.length === evalStackDepthInitial - numArgs,
+      evalStack.stackDepth === evalStackDepthInitial - numArgs,
       ArgumentCountError,
       numArgs,
-      evalStackDepthInitial - evalStack.length,
+      evalStackDepthInitial - evalStack.stackDepth,
     );
   },
 };
@@ -501,8 +514,9 @@ export const instPop: Instruction<[]> = {
   do(machine) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    invariant(context.evalStack.length > 0, StackUnderflowError, "evaluation");
-    context.evalStack.pop();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    invariant(evalStack.stackDepth > 0, StackUnderflowError, "evaluation");
+    evalStack.stackPop();
   },
 };
 
@@ -528,10 +542,10 @@ export const instDuplicate: Instruction<[]> = {
   do(machine) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const { evalStack } = context;
-    const object = evalStack.peek();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const object = evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
-    evalStack.push(object);
+    evalStack.stackPush(object);
   },
 };
 
@@ -559,9 +573,45 @@ export const instJump: Instruction<[number]> = {
   do(machine, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    context.instructionPointer.jumpRelative(offset);
+    jumpRelative(context, offset, machine);
   },
 };
+
+export function jumpRelative(
+  context: VirtualObject,
+  byteOffset: number,
+  vm = context.vm,
+) {
+  const instructionByteIndex = context.readVarWithName(
+    "instructionByteIndex",
+    runtimeTypePositiveNumber,
+  );
+  const closure = context.readVarWithName("closure", runtimeTypeNotNil);
+  const instructionRange = closure.readVarWithName(
+    "instructionByteRange",
+    runtimeTypeNotNil,
+  );
+  const instructionEnd = instructionRange.readVarWithName(
+    "end",
+    runtimeTypePositiveNumber,
+  );
+  const newIndexPrimitive = instructionByteIndex.primitiveValue + byteOffset;
+
+  invariant(
+    newIndexPrimitive >= 0 &&
+      newIndexPrimitive <= instructionEnd.primitiveValue,
+    RangeError,
+    0,
+    instructionEnd.primitiveValue,
+    newIndexPrimitive,
+    "a valid instruction index",
+  );
+
+  context.setVarWithName(
+    "instructionByteIndex",
+    vm.asLiteral(newIndexPrimitive),
+  );
+}
 
 /**
  * If the object on the top of the Stack is True, pop it and jump the given number of bytes.
@@ -589,11 +639,11 @@ export const instPopAndJumpOnTrue: Instruction<[number]> = {
   do(machine, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const { evalStack } = context;
-    const object = evalStack.pop();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const object = evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     if (object.isTrue) {
-      context.instructionPointer.jumpRelative(offset);
+      jumpRelative(context, offset, machine);
     }
   },
 };
@@ -624,11 +674,11 @@ export const instPopAndJumpOnFalse: Instruction<[number]> = {
   do(machine, offset) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const { evalStack } = context;
-    const object = evalStack.pop();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const object = evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     if (object.isFalse) {
-      context.instructionPointer.jumpRelative(offset);
+      jumpRelative(context, offset, machine);
     }
   },
 };
@@ -699,6 +749,17 @@ export function reifyInstruction(code: number): Instruction<any> {
 const SIGNED_TWO_BYTE_MIN = -1 << 15;
 const SIGNED_TWO_BYTE_MAX = (1 << 15) - 1;
 
+export function peekInstructionCodeFromDataView(
+  view: DataView,
+  byteOffset: number,
+) {
+  return view.getInt16(byteOffset, true);
+}
+
+export function getNextInstructionCodeByteOffset(byteOffset: number) {
+  return byteOffset + 2;
+}
+
 /**
  * My instances read/write VM instructions to an Int16Array.
  * (TODO:optmem) (TODO:optspeed) Each type of instruction uses only the number of bytes it needs
@@ -721,12 +782,12 @@ export class InstructionPointer {
   }
 
   peek(): number {
-    return this.view.getInt16(this.byteOffset, true);
+    return peekInstructionCodeFromDataView(this.view, this.byteOffset);
   }
 
   read(): number {
     const code = this.peek();
-    this.byteOffset += 2;
+    this.byteOffset = getNextInstructionCodeByteOffset(this.byteOffset);
     return code;
   }
 
@@ -740,7 +801,7 @@ export class InstructionPointer {
       "a signed two byte value",
     );
     this.view.setInt16(this.byteOffset, twoBytes, true);
-    this.byteOffset += 2;
+    this.byteOffset = getNextInstructionCodeByteOffset(this.byteOffset);
   }
 
   reset() {

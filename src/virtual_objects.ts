@@ -1,28 +1,32 @@
-import type { Closure } from "./closures";
 import { BindingError, invariant, RangeError } from "./errors";
 import { Dict } from "./generics";
+import {
+  runtimeTypeAnyJsLiteral,
+  type RuntimeType,
+} from "./runtime_type_checks";
 import type { VirtualMachine } from "./virtual_machine";
 
-export type PrimitiveJsValue = string | number | boolean | undefined;
-export type LiteralJsValue = PrimitiveJsValue | LiteralJsValue[];
+export type AnyPrimitiveJsValue = string | number | boolean | undefined;
+export type AnyLiteralJsValue = AnyPrimitiveJsValue | AnyLiteralJsValue[];
 
 export class VirtualObject {
   isNil = false;
   isTrue = false;
   isFalse = false;
 
-  // TODO should my instances allow themselves to have both a primativeValue and variables?
-  primitiveValue?: number | string;
-
-  private vars: VirtualObject[] = [];
-
   private vClassCached?: VirtualObject;
+  private vars: VirtualObject[] = [];
+  private _primitiveValue: AnyPrimitiveJsValue = undefined;
 
   get vClass() {
     if (this.vClassCached === undefined) {
       this.vClassCached = this.vm.globalContext.at(this.classKey);
     }
     return this.vClassCached;
+  }
+
+  get primitiveValue() {
+    return this._primitiveValue;
   }
 
   get namedVarCount() {
@@ -33,8 +37,12 @@ export class VirtualObject {
     return this.vars.length;
   }
 
+  get maxIndex() {
+    return this.varCount - 1;
+  }
+
   // (TODO:reflect) this should be an instance variable of class objects
-  methodDict = Dict<Closure>();
+  methodDict = Dict<VirtualObject>();
 
   /**
    * @param classKey The unique name of my class
@@ -45,7 +53,17 @@ export class VirtualObject {
     readonly vm: VirtualMachine,
     readonly classKey: string,
     readonly ivars: string[] = [],
-  ) {}
+    literalValue: AnyLiteralJsValue = undefined,
+  ) {
+    if (Array.isArray(literalValue)) {
+      for (const value of literalValue) {
+        this.vars.push(vm.asLiteral(value));
+      }
+    } else {
+      this._primitiveValue = literalValue;
+    }
+    // TODO initialize vars to `nil`
+  }
 
   checkVarId(id: number) {
     invariant(
@@ -53,8 +71,8 @@ export class VirtualObject {
       RangeError,
       id,
       0,
-      this.varCount - 1,
-      `an index into my variables`,
+      this.namedVarCount - 1,
+      `an index into my (${this.classKey}) variables`,
     );
   }
 
@@ -64,6 +82,7 @@ export class VirtualObject {
   }
 
   setIndex(index: number, value: VirtualObject) {
+    // TODO: this should not be able to effect named variables
     this.setVar(index, value, false);
   }
 
@@ -72,22 +91,37 @@ export class VirtualObject {
     return this.vars[id] ?? this.vm.asLiteral(undefined);
   }
 
-  readIndex(index: number) {
-    return this.readVar(index, false);
+  readIndex<PrimitiveType = AnyLiteralJsValue>(
+    index: number,
+    expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
+  ) {
+    // TODO: this should not be able to read named variables
+    const result = this.readVar(index, false);
+    expectedType.check(result, `index ${index}`);
+    return result;
   }
 
   getVarId(name: string): number {
     return this.vClass.ivars.indexOf(name);
   }
 
-  readVarWithName(name: string) {
+  readVarWithName<PrimitiveType = AnyLiteralJsValue>(
+    name: string,
+    expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
+  ) {
     const varId = this.getVarId(name);
     invariant(varId >= 0, BindingError, this.classKey, name);
-    return this.readVar(this.getVarId(name));
+    const value = this.readVar(varId);
+    expectedType.check(value, name);
+    return value;
   }
 
   setVarWithName(name: string, value: VirtualObject) {
     this.setVar(this.getVarId(name), value);
+  }
+
+  hasVarWithName(name: string) {
+    return this.getVarId(name) >= 0;
   }
 
   /** (TODO:reflect) implement in interpreted language */
@@ -95,7 +129,7 @@ export class VirtualObject {
     return this.vClass.getInstanceMethod(selector);
   }
 
-  getInstanceMethod(selector: string): Closure | undefined {
+  getInstanceMethod(selector: string): VirtualObject | undefined {
     if (selector in this.methodDict) {
       return this.methodDict[selector];
     } else {
@@ -104,5 +138,21 @@ export class VirtualObject {
         return vSuperClass.getInstanceMethod(selector);
       }
     }
+  }
+
+  get stackTop() {
+    return this.vars[this.maxIndex];
+  }
+
+  get stackDepth() {
+    return this.varCount;
+  }
+
+  stackPop() {
+    return this.vars.pop();
+  }
+
+  stackPush(object: VirtualObject) {
+    return this.vars.push(object);
   }
 }

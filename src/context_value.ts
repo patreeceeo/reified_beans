@@ -1,7 +1,19 @@
-import type { ClosureContext } from "./contexts";
-import { invariant, StackUnderflowError, TypeError } from "./errors";
+import {
+  invariant,
+  RangeError,
+  StackUnderflowError,
+  TypeError,
+} from "./errors";
+import {
+  runtimeTypeNotNil,
+  runtimeTypePositiveNumber,
+  runtimeTypeString,
+  type RuntimeType,
+} from "./runtime_type_checks";
 import type { VirtualMachine } from "./virtual_machine";
 import { type VirtualObject } from "./virtual_objects";
+
+// TODO: move this stuff to ./contexts.ts
 
 export enum ContextValue {
   ReceiverVar,
@@ -25,14 +37,17 @@ export function loadContextValue(
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (value) {
     case ContextVariable.ReceiverVar:
-      return context.receiver.readVar(offset);
+      return handleReceiverVar(context, offset);
     case ContextValue.ReceiverVar:
-      return context.receiver.readVar(offset);
+      return handleReceiverVar(context, offset);
     case ContextVariable.TempVar:
     case ContextValue.TempVar:
-      return context.argsAndTemps.at(offset);
+      validateTempVarOffset(offset, context);
+      return context
+        .readVarWithName("argsAndTemps", runtimeTypeNotNil)
+        .readIndex(offset);
     case ContextValue.LiteralConst:
-      return context.closure.literals.at(offset);
+      return readLiteral(context, offset);
     case ContextVariable.LiteralVar:
       return handleLiteralVar(offset, vm, context);
     case ContextValue.LiteralVar:
@@ -40,20 +55,49 @@ export function loadContextValue(
   }
 }
 
+function handleReceiverVar(context: VirtualObject, offset: number) {
+  return context.readVarWithName("receiver", runtimeTypeNotNil).readVar(offset);
+}
+
+function readLiteral<PrimitiveType>(
+  context: VirtualObject,
+  offset: number,
+  expectedType: RuntimeType<PrimitiveType> = runtimeTypeNotNil,
+) {
+  return context
+    .readVarWithName("closure")
+    .readVarWithName("literals", runtimeTypeNotNil)
+    .readIndex(offset, expectedType);
+}
+
 function handleLiteralVar(
   offset: number,
   vm: VirtualMachine,
-  context: ClosureContext,
+  context: VirtualObject,
 ): VirtualObject {
   // (TODO:robustness) (TODO:fidelity) use an instance of Association?
-  const vStrClassKey = context.closure.literals.at(offset);
-  invariant(
-    typeof vStrClassKey.primitiveValue === "string",
-    TypeError,
-    `a string`,
-    String(vStrClassKey.primitiveValue),
-  );
+  const vStrClassKey = readLiteral(context, offset, runtimeTypeString);
   return vm.globalContext.at(vStrClassKey.primitiveValue);
+}
+
+function validateTempVarOffset(offset: number, context: VirtualObject): void {
+  const closure = context.readVarWithName("closure", runtimeTypeNotNil);
+  const argCount = closure.readVarWithName(
+    "argCount",
+    runtimeTypePositiveNumber,
+  ).primitiveValue;
+  const tempCount = closure.readVarWithName(
+    "tempCount",
+    runtimeTypePositiveNumber,
+  ).primitiveValue;
+  invariant(
+    offset >= 0 && offset < argCount + tempCount,
+    RangeError,
+    offset,
+    0,
+    argCount + tempCount,
+    "temp index",
+  );
 }
 
 export function storeContextValue(
@@ -66,15 +110,20 @@ export function storeContextValue(
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (target) {
     case ContextVariable.ReceiverVar: {
-      context.receiver.setVar(offset, vObject);
+      context
+        .readVarWithName("receiver", runtimeTypeNotNil)
+        .setVar(offset, vObject);
       return;
     }
     case ContextVariable.TempVar: {
-      context.argsAndTemps.put(offset, vObject);
+      validateTempVarOffset(offset, context);
+      context
+        .readVarWithName("argsAndTemps", runtimeTypeNotNil)
+        .setIndex(offset, vObject);
       return;
     }
     case ContextVariable.LiteralVar:
-      const key = context.closure.literals.at(offset).primitiveValue;
+      const key = readLiteral(context, offset).primitiveValue;
       invariant(typeof key === "string", TypeError, `a string`, String(key));
       vm.globalContext.put(key, vObject);
   }

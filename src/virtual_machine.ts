@@ -1,23 +1,32 @@
-import { Closure, type ClosureDescriptionJs } from "./closures";
-import { ClosureContext, GlobalContext } from "./contexts";
+import { type ClosureDescriptionJs } from "./closures";
+import { GlobalContext } from "./contexts";
 import {
   invariant,
   NotImplementedError,
   raise,
   StackUnderflowError,
+  TypeError,
 } from "./errors";
-import { Dict, FixedLengthArray, Stack } from "./generics";
+import { Dict, Stack } from "./generics";
 import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
-import { VirtualObject, type LiteralJsValue } from "./virtual_objects";
+import {
+  VirtualObject,
+  type AnyLiteralJsValue,
+  type AnyPrimitiveJsValue,
+} from "./virtual_objects";
 import stdClassLibrary from "./std_class_library";
+import {
+  runtimeTypeNotNil,
+  runtimeTypePositiveNumber,
+} from "./runtime_type_checks";
 
 const MAX_INSTRUCTION_BYTES = 2 ** 20; // 1MB
 
 export class VirtualMachine {
   globalContext = new GlobalContext();
 
-  contextStack = Stack<ClosureContext>();
+  contextStack = Stack<VirtualObject>();
 
   instructionBuffer = new ArrayBuffer(MAX_INSTRUCTION_BYTES);
   instructionPointer = new InstructionPointer(
@@ -37,11 +46,15 @@ export class VirtualMachine {
   internedStrings = Dict<VirtualObject>();
   internedNumbers = [] as VirtualObject[];
 
-  createObject(classKey: string, ivars: string[] = []) {
-    return new VirtualObject(this, classKey, ivars);
+  createObject(
+    classKey: string,
+    ivars: string[] = [],
+    literalValue: AnyLiteralJsValue = undefined,
+  ) {
+    return new VirtualObject(this, classKey, ivars, literalValue);
   }
 
-  asLiteral(value: LiteralJsValue) {
+  asLiteral(value: AnyLiteralJsValue): VirtualObject {
     const classKey = this.getLiteralClassName(value);
     switch (classKey) {
       case "String":
@@ -49,8 +62,7 @@ export class VirtualMachine {
         if (value in this.internedStrings) {
           return this.internedStrings[value];
         } else {
-          const vo = this.createObject(classKey);
-          vo.primitiveValue = value;
+          const vo = this.createObject(classKey, [], value);
           this.internedStrings[value] = vo;
           return vo;
         }
@@ -59,8 +71,7 @@ export class VirtualMachine {
         if (value in this.internedNumbers) {
           return this.internedNumbers[value];
         } else {
-          const vo = this.createObject(classKey);
-          vo.primitiveValue = value;
+          const vo = this.createObject(classKey, [], value);
           this.internedNumbers[value] = vo;
           return vo;
         }
@@ -71,12 +82,8 @@ export class VirtualMachine {
       case "False":
         return this.globalContext.at("false");
       case "Array":
-        invariant(Array.isArray(value), TypeError, "Array", value);
-        const vArray = this.createObject(classKey, []);
-        for (let i = 0; i < value.length; i++) {
-          vArray.setIndex(i, this.asLiteral(value[i]));
-        }
-        return vArray;
+        invariant(Array.isArray(value), TypeError, "Array", String(value));
+        return this.createObject(classKey, [], value);
       default:
         raise(
           TypeError,
@@ -86,7 +93,8 @@ export class VirtualMachine {
     }
   }
 
-  getLiteralClassName(value: LiteralJsValue) {
+  // TODO: move to virtual_objects
+  getLiteralClassName(value: AnyLiteralJsValue) {
     if (value === true) {
       return "True";
     } else if (value === false) {
@@ -100,7 +108,7 @@ export class VirtualMachine {
         case "undefined":
           return "UndefinedObject";
         case "object":
-          invariant(Array.isArray(value), TypeError, "Array", value);
+          invariant(Array.isArray(value), TypeError, "Array", String(value));
           return "Array";
         default:
           raise(
@@ -159,7 +167,8 @@ export class VirtualMachine {
   peekNextReceiver() {
     const context = this.contextStack.peek();
     invariant(context, StackUnderflowError, "contextStack");
-    const result = context.evalStack.peek();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const result = evalStack.stackTop;
     invariant(result, StackUnderflowError, "evalStack");
     return result;
   }
@@ -191,50 +200,142 @@ export class VirtualMachine {
     });
   }
 
+  // TODO: maybe this should be a method on ClosureContext?
   populateArgs(
-    closure: Closure,
-    sender: ClosureContext,
-    args: FixedLengthArray<VirtualObject>,
+    closure: VirtualObject,
+    senderContext: VirtualObject,
+    args: VirtualObject,
   ) {
-    for (let index = 0; index < closure.argCount; index++) {
-      args.put(index, sender.evalStack.pop()!);
+    const argCount = closure.readVarWithName(
+      "argCount",
+      runtimeTypePositiveNumber,
+    );
+    const evalStack = senderContext.readVarWithName(
+      "evalStack",
+      runtimeTypeNotNil,
+    );
+    for (let index = 0; index < argCount.primitiveValue; index++) {
+      args.setIndex(index, evalStack.stackPop()!);
     }
   }
 
-  createClosure(description: ClosureDescriptionJs = {}): Closure {
+  createClosure(description: ClosureDescriptionJs = {}): VirtualObject {
     const byteOffset = this.instructionPointer.byteOffset;
 
     if (description.getInstructions) {
       description.getInstructions(this.instructionPointer);
     }
 
-    const byteLength = this.instructionPointer.byteOffset - byteOffset;
-
     const literals = description.literals ?? [];
 
-    const closure = new Closure(
-      description.argCount ?? 0,
-      description.tempCount ?? 0,
-      literals.length,
-      this,
-      byteOffset,
-      byteLength,
+    const instructionByteRange = this.createObject("Range");
+    instructionByteRange.setVarWithName("start", this.asLiteral(byteOffset));
+    instructionByteRange.setVarWithName(
+      "end",
+      this.asLiteral(this.instructionPointer.byteOffset),
     );
 
-    for (const [i, value] of literals.entries()) {
-      closure.literals.put(i, this.asLiteral(value));
-    }
+    const closure = this.createObject("Closure");
+    closure.setVarWithName(
+      "argCount",
+      this.asLiteral(description.argCount ?? 0),
+    );
+    closure.setVarWithName(
+      "tempCount",
+      this.asLiteral(description.tempCount ?? 0),
+    );
+    closure.setVarWithName("literals", this.asLiteral(literals));
+    closure.setVarWithName("instructionByteRange", instructionByteRange);
 
     return closure;
   }
 
+  createMethodContext(receiver: VirtualObject, closure: VirtualObject) {
+    const context = this.createObject("MethodContext");
+    const argCount = closure.readVarWithName(
+      "argCount",
+      runtimeTypePositiveNumber,
+    );
+    const tempCount = closure.readVarWithName(
+      "tempCount",
+      runtimeTypePositiveNumber,
+    );
+
+    this.initializeContext(context, receiver, closure);
+
+    const vArgsAndTemps = this.createObject(
+      "Array",
+      [],
+      new Array(argCount.primitiveValue + tempCount.primitiveValue),
+    );
+
+    context.setVarWithName("argsAndTemps", vArgsAndTemps);
+
+    this.initializeLocalContextForClosureLiterals(closure, context);
+    return context;
+  }
+
+  createBlockContext(blockClosure: VirtualObject) {
+    const localContext = blockClosure.readVarWithName(
+      "localContext",
+      runtimeTypeNotNil,
+    );
+    invariant(
+      localContext,
+      Error,
+      "Expected block closure to refer to the context of another closure",
+    );
+    const receiver = localContext.readVarWithName(
+      "receiver",
+      runtimeTypeNotNil,
+    );
+    const blockContext = this.createObject("BlockContext");
+
+    this.initializeContext(blockContext, receiver, blockClosure);
+
+    blockContext.setVarWithName("localContext", localContext);
+
+    this.initializeLocalContextForClosureLiterals(blockClosure, localContext);
+
+    return blockContext;
+  }
+
+  initializeContext(
+    context: VirtualObject,
+    receiver: VirtualObject,
+    closure: VirtualObject,
+  ) {
+    context.setVarWithName("evalStack", this.createObject("Array", [], []));
+    context.setVarWithName("instructionByteIndex", this.asLiteral(0));
+    context.setVarWithName("receiver", receiver);
+    context.setVarWithName("closure", closure);
+  }
+
+  initializeLocalContextForClosureLiterals(
+    closure: VirtualObject,
+    context: VirtualObject,
+  ) {
+    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+    for (let i = 0; i <= literals.maxIndex; i++) {
+      const literal = literals.readIndex(i);
+      if (literal.hasVarWithName("localContext")) {
+        literal.setVarWithName("localContext", context);
+      }
+    }
+  }
+
   /** (TODO:reflect) implement in interpreted language? */
-  invokeAsMethod(closure: Closure) {
+  invokeAsMethod(closure: VirtualObject) {
     const sender = this.contextStack.peek();
     invariant(sender, StackUnderflowError, "context");
-    const receiver = sender.evalStack.pop()!;
-    const context = new ClosureContext(receiver, closure);
-    this.populateArgs(closure, sender, context.argsAndTemps);
+    const evalStack = sender.readVarWithName("receiver", runtimeTypeNotNil);
+    const receiver = evalStack.stackPop()!;
+    const context = this.createMethodContext(receiver, closure);
+    const argsAndTemps = context.readVarWithName(
+      "argsAndTemps",
+      runtimeTypeNotNil,
+    );
+    this.populateArgs(closure, sender, argsAndTemps);
     this.contextStack.push(context);
   }
 

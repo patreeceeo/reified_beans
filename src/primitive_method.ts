@@ -1,7 +1,8 @@
-import type { ClosureContext } from "./contexts";
 import { invariant, StackUnderflowError } from "./errors";
 import { Dict } from "./generics";
+import { runtimeTypeNotNil } from "./runtime_type_checks";
 import type { VirtualMachine } from "./virtual_machine";
+import type { VirtualObject } from "./virtual_objects";
 
 // export enum SpecialSelectorType {
 //   Plus,
@@ -52,7 +53,9 @@ primitiveMethodDict["+"] = {
       return false;
     }
     const [receiver, arg] = arithmeticOpArgs;
-    context.evalStack.push(vm.asLiteral(receiver + arg));
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+
+    evalStack.stackPush(vm.asLiteral(receiver + arg));
     return true;
   },
 };
@@ -65,7 +68,9 @@ primitiveMethodDict["-"] = {
       return false;
     }
     const [receiver, arg] = arithmeticOpArgs;
-    context.evalStack.push(vm.asLiteral(receiver - arg));
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+
+    evalStack.stackPush(vm.asLiteral(receiver - arg));
     return true;
   },
 };
@@ -74,45 +79,46 @@ primitiveMethodDict["at:"] = {
   attempt(vm: VirtualMachine): boolean {
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const { evalStack } = context;
-    const receiver = evalStack.pop();
-    const arg = evalStack.pop();
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const receiver = evalStack.stackPop();
+    const arg = evalStack.stackPop();
 
     invariant(receiver, StackUnderflowError, "evaluation");
     invariant(arg, StackUnderflowError, "evaluation");
 
     if (typeof arg.primitiveValue !== "number") {
-      evalStack.push(receiver);
-      evalStack.push(arg);
+      evalStack.stackPush(receiver);
+      evalStack.stackPush(arg);
       return false;
     }
 
     const value = receiver.readIndex(arg.primitiveValue);
-    context.evalStack.push(value);
+    evalStack.stackPush(value);
     return true;
   },
 };
 
 function loadArithmeticOpArgs(
-  context: ClosureContext,
+  context: VirtualObject,
   target: [number, number],
 ): boolean {
-  const receiver = context.evalStack.pop();
+  const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+  const receiver = evalStack.stackPop();
   invariant(receiver, StackUnderflowError, "evaluation");
-  const arg = context.evalStack.peek();
+  const arg = evalStack.stackTop;
   if (
     typeof receiver.primitiveValue !== "number" ||
     arg === undefined ||
     typeof arg.primitiveValue !== "number"
   ) {
     // Bail out, but first restore the receiver to the eval stack
-    context.evalStack.push(receiver);
+    evalStack.stackPush(receiver);
     return false;
   }
   target[0] = receiver.primitiveValue;
   target[1] = arg.primitiveValue;
 
   // Pop the arg we just used
-  context.evalStack.pop();
+  evalStack.stackPop();
   return true;
 }

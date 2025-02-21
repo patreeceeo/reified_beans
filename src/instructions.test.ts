@@ -14,9 +14,9 @@ import {
   instPopAndJumpOnFalse,
   reifyInstruction,
   InstructionPointer,
+  jumpRelative,
 } from "./instructions";
 import { VirtualMachine } from "./virtual_machine";
-import { ClosureContext } from "./contexts";
 import {
   reifySpecialPushValue,
   reifySpecialReturnValue,
@@ -28,11 +28,13 @@ import {
   ContextValue,
   ContextVariable,
 } from "./context_value";
-import type { ClosureDescriptionJs } from "./closures";
+import {
+  runtimeTypeNotNil,
+  runtimeTypePositiveNumber,
+} from "./runtime_type_checks";
 
 const array = new ArrayBuffer(4);
 const pointer = new InstructionPointer(array, 0, 4);
-const emptyClosureDescription: ClosureDescriptionJs = {};
 
 function fillInstructionBuffer(
   pointer: InstructionPointer,
@@ -106,16 +108,14 @@ const additionalTests = {
   ) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(
-        receiver,
-        vm.createClosure(emptyClosureDescription),
-      );
+      const receiver = vm.asLiteral(undefined);
+      const context = vm.createMethodContext(receiver, vm.createClosure());
       vm.contextStack.push(context);
 
       inst.do(vm, specialValueId);
 
-      expect(context.evalStack.peek()).toBe(
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      expect(evalStack.stackTop).toBe(
         reifySpecialPushValue(specialValueId, vm),
       );
     });
@@ -132,21 +132,24 @@ const additionalTests = {
   ) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const receiver = vm.asLiteral("receiver");
-      const context1 = new ClosureContext(
-        receiver,
-        vm.createClosure(emptyClosureDescription),
+      const context1 = vm.createMethodContext(
+        vm.asLiteral(true),
+        vm.createClosure(),
       );
-      const context2 = new ClosureContext(
-        receiver,
-        vm.createClosure(emptyClosureDescription),
+      const context2 = vm.createMethodContext(
+        vm.asLiteral(true),
+        vm.createClosure(),
       );
       vm.contextStack.push(context1);
       vm.contextStack.push(context2);
 
       inst.do(vm, specialValueId);
 
-      expect(context1.evalStack.peek()).toBe(
+      const evalStack = context1.readVarWithName(
+        "evalStack",
+        runtimeTypeNotNil,
+      );
+      expect(evalStack.stackTop).toBe(
         reifySpecialReturnValue(specialValueId, vm),
       );
       expect(vm.contextStack.length).toBe(1);
@@ -160,10 +163,9 @@ const additionalTests = {
 
     test("Fail if there's only one context", () => {
       const vm = new VirtualMachine();
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(
-        receiver,
-        vm.createClosure(emptyClosureDescription),
+      const context = vm.createMethodContext(
+        vm.asLiteral(undefined),
+        vm.createClosure(),
       );
       vm.contextStack.push(context);
       expect(() => inst.do(vm, specialValueId)).toThrow();
@@ -174,29 +176,33 @@ const additionalTests = {
     inst: typeof instPush,
     [source, offset]: Parameters<typeof instPush.explain>,
   ) => {
-    const vm = new VirtualMachine();
-    const closure = vm.createClosure({
-      argCount: 4,
-      tempCount: 4,
-      literals: [0, 0, 0, 0],
-    });
-    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
-    const receiver = vm.createObject("TestObject");
-    const context = new ClosureContext(receiver, closure);
-
-    const emptyReceiver = vm.asLiteral("empty receiver");
-    const emptyClosure = vm.createClosure(emptyClosureDescription);
-    const emptyContext = new ClosureContext(emptyReceiver, emptyClosure);
-
-    closure.literals.put(3, vm.asLiteral("Object"));
-    context.argsAndTemps.put(3, vm.asLiteral(42));
-    receiver.setVar(2, vm.asLiteral(true));
-
     test("Do it successfully", () => {
+      const vm = new VirtualMachine();
+      const closure = vm.createClosure({
+        argCount: 4,
+        tempCount: 4,
+        literals: [0, 0, 0, 0],
+      });
+      vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+      const context = vm.createMethodContext(
+        vm.createObject("TestObject"),
+        closure,
+      );
+      const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+      const argsAndTemps = context.readVarWithName(
+        "argsAndTemps",
+        runtimeTypeNotNil,
+      );
+      const receiver = context.readVarWithName("receiver", runtimeTypeNotNil);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+
+      literals.setIndex(3, vm.asLiteral("Object"));
+      argsAndTemps.setIndex(3, vm.asLiteral(42));
+      receiver.setVar(2, vm.asLiteral(true));
       vm.contextStack.push(context);
       const value = loadContextValue(source, offset, vm);
       inst.do(vm, source, offset);
-      expect(context.evalStack.peek()).toBe(value);
+      expect(evalStack.stackTop).toBe(value);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -205,6 +211,12 @@ const additionalTests = {
     });
 
     test("Fail if the closure or context is lacking the specified value", () => {
+      const vm = new VirtualMachine();
+      const emptyClosure = vm.createClosure();
+      const emptyContext = vm.createMethodContext(
+        vm.asLiteral(undefined),
+        emptyClosure,
+      );
       vm.contextStack.push(emptyContext);
       expect(() => inst.do(vm, source, offset)).toThrow();
     });
@@ -221,24 +233,33 @@ const additionalTests = {
       literals: [0, 0, 0, 0],
     });
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
-    const receiver = vm.createObject("TestObject");
-    const context = new ClosureContext(receiver, closure);
-    context.evalStack.push(vm.asLiteral("value"));
+    const vTestObject = vm.createObject("TestObject");
+    const context = vm.createMethodContext(vTestObject, closure);
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-    const emptyReceiver = vm.asLiteral("empty receiver");
-    const emptyClosure = vm.createClosure(emptyClosureDescription);
-    const emptyContext = new ClosureContext(emptyReceiver, emptyClosure);
+    const emptyClosure = vm.createClosure();
+    const emptyContext = vm.createMethodContext(
+      vm.asLiteral(undefined),
+      emptyClosure,
+    );
 
-    closure.literals.put(3, vm.asLiteral("Object"));
-    context.argsAndTemps.put(3, vm.asLiteral(42));
-    context.receiver.setVar(2, vm.asLiteral(true));
+    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+
+    evalStack.stackPush(vm.asLiteral("value"));
+    literals.setIndex(3, vm.asLiteral("Object"));
+
+    const argsAndTemps = context.readVarWithName(
+      "argsAndTemps",
+      runtimeTypeNotNil,
+    );
+    argsAndTemps.setIndex(3, vm.asLiteral(42));
+    const receiver = context.readVarWithName("receiver", runtimeTypeNotNil);
+    receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       vm.contextStack.push(context);
       inst.do(vm, target, offset);
-      expect(context.evalStack.peek()).toBe(
-        loadContextValue(target, offset, vm),
-      );
+      expect(evalStack.stackTop).toBe(loadContextValue(target, offset, vm));
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -257,10 +278,15 @@ const additionalTests = {
         // At the moment, there's no way for a VirtualObject to know how many
         // instance variables it has, since it doesn't directly reference its class,
         // so we can't test that here.
+        // Time to revisit!
         return;
       }
 
-      emptyContext.evalStack.push(vm.asLiteral("value"));
+      const evalStack = emptyContext.readVarWithName(
+        "evalStack",
+        runtimeTypeNotNil,
+      );
+      evalStack.stackPush(vm.asLiteral("value"));
       vm.contextStack.push(emptyContext);
       expect(() => inst.do(vm, target, offset)).toThrow();
     });
@@ -278,23 +304,30 @@ const additionalTests = {
     });
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
     const receiver = vm.createObject("TestObject");
-    const context = new ClosureContext(receiver, closure);
+    const context = vm.createMethodContext(receiver, closure);
     const pushedValue = vm.asLiteral("value");
-    context.evalStack.push(pushedValue);
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-    const emptyReceiver = vm.asLiteral("empty receiver");
-    const emptyClosure = vm.createClosure(emptyClosureDescription);
-    const emptyContext = new ClosureContext(emptyReceiver, emptyClosure);
+    const emptyClosure = vm.createClosure();
+    const emptyContext = vm.createMethodContext(receiver, emptyClosure);
 
-    closure.literals.put(3, vm.asLiteral("Object"));
-    context.argsAndTemps.put(3, vm.asLiteral(42));
-    context.receiver.setVar(2, vm.asLiteral(true));
+    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+
+    evalStack.stackPush(pushedValue);
+    literals.setIndex(3, vm.asLiteral("Object"));
+
+    const argsAndTemps = context.readVarWithName(
+      "argsAndTemps",
+      runtimeTypeNotNil,
+    );
+    argsAndTemps.setIndex(3, vm.asLiteral(42));
+    receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       vm.contextStack.push(context);
       inst.do(vm, target, offset);
       expect(loadContextValue(target, offset, vm)).toBe(pushedValue);
-      expect(context.evalStack.length).toBe(0);
+      expect(evalStack.stackDepth).toBe(0);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -308,10 +341,16 @@ const additionalTests = {
         // At the moment, there's no way for a VirtualObject to know how many
         // instance variables it has, since it doesn't directly reference its class,
         // so we can't test that here.
+        //
+        // Time to revisit!
         return;
       }
 
-      emptyContext.evalStack.push(vm.asLiteral("value"));
+      const evalStack = emptyContext.readVarWithName(
+        "evalStack",
+        runtimeTypeNotNil,
+      );
+      evalStack.stackPush(pushedValue);
       vm.contextStack.push(emptyContext);
       expect(() => inst.do(vm, target, offset)).toThrow();
     });
@@ -329,24 +368,25 @@ const additionalTests = {
       tempCount: 4,
       literals: [0, 0],
     });
-    const receiver = vm.asLiteral("receiver");
-    const context = new ClosureContext(receiver, closure);
+    const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
     const testSelectors = ["+", "-"];
 
+    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
     for (const [index, selector] of testSelectors.entries()) {
-      closure.literals.put(index, vm.asLiteral(selector));
+      literals.setIndex(index, vm.asLiteral(selector));
     }
 
     test("Do it successfully", () => {
       vm.contextStack.push(context);
-      context.evalStack.push(vm.asLiteral(2));
-      context.evalStack.push(vm.asLiteral(3));
+      evalStack.stackPush(vm.asLiteral(2));
+      evalStack.stackPush(vm.asLiteral(3));
 
       inst.do(vm, selectorId, numArgs);
 
-      expect(context.evalStack.length).toBe(1);
-      const result = context.evalStack.peek()!;
+      expect(evalStack.stackDepth).toBe(1);
+      const result = evalStack.stackTop!;
       expect(typeof result.primitiveValue).toBe("number");
       const primativeResult = result.primitiveValue as number;
       switch (testSelectors[selectorId]) {
@@ -361,16 +401,16 @@ const additionalTests = {
 
     test("Fail if the number of args is too big", () => {
       vm.contextStack.push(context);
-      context.evalStack.push(vm.asLiteral(2));
-      context.evalStack.push(vm.asLiteral(3));
+      evalStack.stackPush(vm.asLiteral(2));
+      evalStack.stackPush(vm.asLiteral(3));
 
       expect(() => inst.do(vm, selectorId, numArgs + 1)).toThrow();
     });
 
     test("Fail if the number of args is too small", () => {
       vm.contextStack.push(context);
-      context.evalStack.push(vm.asLiteral(2));
-      context.evalStack.push(vm.asLiteral(3));
+      evalStack.stackPush(vm.asLiteral(2));
+      evalStack.stackPush(vm.asLiteral(3));
 
       expect(() => inst.do(vm, selectorId, numArgs - 1)).toThrow();
     });
@@ -389,14 +429,15 @@ const additionalTests = {
         tempCount: 4,
         literals: [],
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
-      context.evalStack.push(vm.asLiteral("value"));
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+
+      evalStack.stackPush(vm.asLiteral("value"));
       vm.contextStack.push(context);
 
       inst.do(vm);
 
-      expect(context.evalStack.length).toBe(0);
+      expect(evalStack.stackDepth).toBe(0);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -406,10 +447,9 @@ const additionalTests = {
 
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(
-        receiver,
-        vm.createClosure(emptyClosureDescription),
+      const context = vm.createMethodContext(
+        vm.asLiteral(undefined),
+        vm.createClosure(),
       );
       vm.contextStack.push(context);
       expect(() => inst.do(vm)).toThrow();
@@ -424,15 +464,16 @@ const additionalTests = {
         tempCount: 4,
         literals: [],
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
-      context.evalStack.push(vm.asLiteral("value"));
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+
+      evalStack.stackPush(vm.asLiteral("value"));
       vm.contextStack.push(context);
 
       inst.do(vm);
 
-      expect(context.evalStack.length).toBe(2);
-      expect(context.evalStack.pop()).toBe(context.evalStack.peek());
+      expect(evalStack.stackDepth).toBe(2);
+      expect(evalStack.stackPop()).toBe(evalStack.stackTop);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -442,10 +483,9 @@ const additionalTests = {
 
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(
-        receiver,
-        vm.createClosure(emptyClosureDescription),
+      const context = vm.createMethodContext(
+        vm.asLiteral(undefined),
+        vm.createClosure(),
       );
       vm.contextStack.push(context);
       expect(() => inst.do(vm)).toThrow();
@@ -466,15 +506,19 @@ const additionalTests = {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
 
-      context.instructionPointer.jumpRelative(5);
+      jumpRelative(context, 5);
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.instructionPointer.byteOffset).toBe(5 + offset);
+      expect(
+        context.readVarWithName(
+          "instructionByteIndex",
+          runtimeTypePositiveNumber,
+        ).primitiveValue,
+      ).toBe(5 + offset);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -489,8 +533,7 @@ const additionalTests = {
         tempCount: 4,
         literals: [],
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
@@ -511,16 +554,21 @@ const additionalTests = {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-      context.instructionPointer.jumpRelative(5);
-      context.evalStack.push(vm.asLiteral(true));
+      jumpRelative(context, 5);
+      evalStack.stackPush(vm.asLiteral(true));
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.instructionPointer.byteOffset).toBe(5 + offset);
+      expect(
+        context.readVarWithName(
+          "instructionByteIndex",
+          runtimeTypePositiveNumber,
+        ).primitiveValue,
+      ).toBe(5 + offset);
     });
 
     test("Do it successfully (without jump)", () => {
@@ -533,16 +581,21 @@ const additionalTests = {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-      context.instructionPointer.jumpRelative(5);
-      context.evalStack.push(vm.asLiteral(false));
+      jumpRelative(context, 5);
+      evalStack.stackPush(vm.asLiteral(false));
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.instructionPointer.byteOffset).toBe(5);
+      expect(
+        context.readVarWithName(
+          "instructionByteIndex",
+          runtimeTypePositiveNumber,
+        ).primitiveValue,
+      ).toBe(5);
     });
 
     test("Fail if the offset is out of bounds", () => {
@@ -552,10 +605,10 @@ const additionalTests = {
         tempCount: 4,
         literals: [],
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-      context.evalStack.push(vm.asLiteral(true));
+      evalStack.stackPush(vm.asLiteral(true));
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
@@ -576,8 +629,7 @@ const additionalTests = {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
@@ -598,16 +650,21 @@ const additionalTests = {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-      context.instructionPointer.jumpRelative(5);
-      context.evalStack.push(vm.asLiteral(false));
+      jumpRelative(context, 5);
+      evalStack.stackPush(vm.asLiteral(false));
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.instructionPointer.byteOffset).toBe(5 + offset);
+      expect(
+        context.readVarWithName(
+          "instructionByteIndex",
+          runtimeTypePositiveNumber,
+        ).primitiveValue,
+      ).toBe(5 + offset);
     });
 
     test("Do it successfully (without jump)", () => {
@@ -620,16 +677,21 @@ const additionalTests = {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-      context.instructionPointer.jumpRelative(5);
-      context.evalStack.push(vm.asLiteral(true));
+      jumpRelative(context, 5);
+      evalStack.stackPush(vm.asLiteral(true));
       vm.contextStack.push(context);
 
       inst.do(vm, offset);
 
-      expect(context.instructionPointer.byteOffset).toBe(5);
+      expect(
+        context.readVarWithName(
+          "instructionByteIndex",
+          runtimeTypePositiveNumber,
+        ).primitiveValue,
+      ).toBe(5);
     });
 
     test("Fail if the offset is out of bounds", () => {
@@ -639,10 +701,10 @@ const additionalTests = {
         tempCount: 4,
         literals: [],
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
 
-      context.evalStack.push(vm.asLiteral(false));
+      evalStack.stackPush(vm.asLiteral(false));
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
@@ -656,15 +718,14 @@ const additionalTests = {
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
-        argCount: 4,
-        tempCount: 4,
+        argCount: 0,
+        tempCount: 0,
         literals: [],
         getInstructions(pointer) {
           fillInstructionBuffer(pointer, 12);
         },
       });
-      const receiver = vm.asLiteral("receiver");
-      const context = new ClosureContext(receiver, closure);
+      const context = vm.createMethodContext(vm.asLiteral(undefined), closure);
       vm.contextStack.push(context);
 
       expect(() => inst.do(vm, offset)).toThrow();
