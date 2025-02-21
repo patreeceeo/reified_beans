@@ -76,25 +76,13 @@ export class VirtualObject {
     );
   }
 
-  checkIndex(index: number) {
-    invariant(
-      index >= this.namedVarCount,
-      RangeError,
-      index,
-      this.namedVarCount,
-      Number.MAX_SAFE_INTEGER,
-      `an index into my (${this.classKey}) indexable variables`,
-    );
-  }
-
   setVar(id: number, value: VirtualObject, checkId = true) {
     checkId && this.checkVarId(id);
     this.vars[id] = value;
   }
 
   setIndex(index: number, value: VirtualObject) {
-    this.checkIndex(index);
-    this.setVar(index, value, false);
+    this.setVar(index + this.namedVarCount, value, false);
   }
 
   readVar(id: number, checkId = true) {
@@ -106,8 +94,7 @@ export class VirtualObject {
     index: number,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
-    this.checkIndex(index);
-    const result = this.readVar(index, false);
+    const result = this.readVar(index + this.namedVarCount, false);
     expectedType.check(result, `index ${index}`);
     return result;
   }
