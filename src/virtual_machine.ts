@@ -1,20 +1,10 @@
 import { type ClosureDescriptionJs } from "./closures";
 import { GlobalContext } from "./contexts";
-import {
-  invariant,
-  NotImplementedError,
-  raise,
-  StackUnderflowError,
-  TypeError,
-} from "./errors";
+import { invariant, raise, StackUnderflowError, TypeError } from "./errors";
 import { Dict, Stack } from "./generics";
 import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
-import {
-  VirtualObject,
-  type AnyLiteralJsValue,
-  type AnyPrimitiveJsValue,
-} from "./virtual_objects";
+import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
 import stdClassLibrary from "./std_class_library";
 import {
   runtimeTypeNotNil,
