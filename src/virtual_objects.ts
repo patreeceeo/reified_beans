@@ -92,8 +92,8 @@ export class VirtualObject {
     this.setVar(index + this.namedVarCount, value, false);
   }
 
-  readVar(id: number, checkId = true) {
-    checkId && this.checkVarId(id);
+  readVar(id: number) {
+    this.checkVarId(id);
     return this.vars[id] ?? this.vNil;
   }
 
@@ -101,7 +101,7 @@ export class VirtualObject {
     index: number,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
-    const result = this.readVar(index + this.namedVarCount, false);
+    const result = this.vars[index + this.namedVarCount] ?? this.vNil;
     expectedType.check(result, `index ${index}`);
     return result;
   }
