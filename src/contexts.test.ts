@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ContextValue, loadContextValue } from "./context_value";
+import { ContextValue, loadContextValue } from "./contexts";
 import { VirtualMachine } from "./virtual_machine";
 import { runtimeTypeNotNil } from "./runtime_type_checks";
 

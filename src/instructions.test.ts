@@ -23,11 +23,7 @@ import {
   SpecialPushValue,
   SpecialReturnValue,
 } from "./special_value";
-import {
-  loadContextValue,
-  ContextValue,
-  ContextVariable,
-} from "./context_value";
+import { loadContextValue, ContextValue, ContextVariable } from "./contexts";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
