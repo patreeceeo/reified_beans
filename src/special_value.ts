@@ -3,8 +3,6 @@ import { runtimeTypeNotNil } from "./runtime_type_checks";
 import type { VirtualMachine } from "./virtual_machine";
 import type { VirtualObject } from "./virtual_objects";
 
-// TODO define function that maps SpecialPushValue to SpecialReturnValue, then use that to call reifySpecialPushValue from reifySpecialReturnValue
-
 export enum SpecialPushValue {
   Self,
   True,
@@ -21,6 +19,21 @@ export enum SpecialReturnValue {
   True,
   False,
   Nil,
+}
+
+function mapSpecialReturnValueToSpecialPushValue(
+  value: SpecialReturnValue,
+): SpecialPushValue {
+  switch (value) {
+    case SpecialReturnValue.Self:
+      return SpecialPushValue.Self;
+    case SpecialReturnValue.True:
+      return SpecialPushValue.True;
+    case SpecialReturnValue.False:
+      return SpecialPushValue.False;
+    case SpecialReturnValue.Nil:
+      return SpecialPushValue.Nil;
+  }
 }
 
 export function reifySpecialPushValue(
@@ -53,16 +66,6 @@ export function reifySpecialReturnValue(
   value: SpecialReturnValue,
   vm: VirtualMachine,
 ): VirtualObject {
-  switch (value) {
-    case SpecialReturnValue.Self:
-      const context = vm.contextStack.peek();
-      invariant(context, StackUnderflowError, "context");
-      return context.readVarWithName("receiver", runtimeTypeNotNil);
-    case SpecialReturnValue.True:
-      return vm.asLiteral(true);
-    case SpecialReturnValue.False:
-      return vm.asLiteral(false);
-    case SpecialReturnValue.Nil:
-      return vm.asLiteral(undefined);
-  }
+  const pushValue = mapSpecialReturnValueToSpecialPushValue(value);
+  return reifySpecialPushValue(pushValue, vm);
 }
