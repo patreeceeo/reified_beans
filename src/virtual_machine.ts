@@ -1,6 +1,6 @@
 import { type ClosureDescriptionJs } from "./closures";
 import { GlobalContext } from "./contexts";
-import { invariant, raise, StackUnderflowError, TypeError } from "./errors";
+import { invariant, raise, StackUnderflowError } from "./errors";
 import { Dict, Stack } from "./generics";
 import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
@@ -25,6 +25,12 @@ export class VirtualMachine {
     MAX_INSTRUCTION_BYTES,
   );
 
+  vNil = VirtualObject.createNil(this);
+  vTrue = VirtualObject.createTrue(this);
+  vFalse = VirtualObject.createFalse(this);
+  internedStrings = Dict<VirtualObject>();
+  internedNumbers = [] as VirtualObject[];
+
   constructor() {
     this.initializeGlobalContext();
   }
@@ -33,26 +39,19 @@ export class VirtualMachine {
     return "VirtualMachine";
   }
 
-  internedStrings = Dict<VirtualObject>();
-  internedNumbers = [] as VirtualObject[];
-
-  createObject(
-    classKey: string,
-    ivars: string[] = [],
-    literalValue: AnyLiteralJsValue = undefined,
-  ) {
-    return new VirtualObject(this, classKey, ivars, literalValue);
+  createObject(classKey: string, literalValue?: AnyLiteralJsValue) {
+    return VirtualObject.createObject(this, classKey, literalValue);
   }
 
   asLiteral(value: AnyLiteralJsValue): VirtualObject {
-    const classKey = this.getLiteralClassName(value);
+    const classKey = VirtualObject.getLiteralClassKey(value);
     switch (classKey) {
       case "String":
         invariant(typeof value === "string", TypeError, "String", typeof value);
         if (value in this.internedStrings) {
           return this.internedStrings[value];
         } else {
-          const vo = this.createObject(classKey, [], value);
+          const vo = VirtualObject.createObject(this, classKey, value);
           this.internedStrings[value] = vo;
           return vo;
         }
@@ -61,19 +60,19 @@ export class VirtualMachine {
         if (value in this.internedNumbers) {
           return this.internedNumbers[value];
         } else {
-          const vo = this.createObject(classKey, [], value);
+          const vo = VirtualObject.createObject(this, classKey, value);
           this.internedNumbers[value] = vo;
           return vo;
         }
       case "UndefinedObject":
-        return this.globalContext.at("nil");
+        return this.vNil;
       case "True":
-        return this.globalContext.at("true");
+        return this.vTrue;
       case "False":
-        return this.globalContext.at("false");
+        return this.vFalse;
       case "Array":
         invariant(Array.isArray(value), TypeError, "Array", String(value));
-        return this.createObject(classKey, [], value);
+        return VirtualObject.createObject(this, classKey, value);
       default:
         raise(
           TypeError,
@@ -83,45 +82,12 @@ export class VirtualMachine {
     }
   }
 
-  // TODO: move to virtual_objects
-  getLiteralClassName(value: AnyLiteralJsValue) {
-    if (value === true) {
-      return "True";
-    } else if (value === false) {
-      return "False";
-    } else {
-      switch (typeof value) {
-        case "string":
-          return "String";
-        case "number":
-          return "Number";
-        case "undefined":
-          return "UndefinedObject";
-        case "object":
-          invariant(Array.isArray(value), TypeError, "Array", String(value));
-          return "Array";
-        default:
-          raise(
-            TypeError,
-            "string | number | boolean | undefined",
-            typeof value,
-          );
-      }
-    }
-  }
-
   initializeGlobalContext() {
-    const vNil = this.createObject(this.getLiteralClassName(undefined));
-    vNil.isNil = true;
-    this.globalContext.put("nil", vNil);
+    this.globalContext.put("nil", this.vNil);
 
-    const vTrue = this.createObject(this.getLiteralClassName(true));
-    vTrue.isTrue = true;
-    this.globalContext.put("true", vTrue);
+    this.globalContext.put("true", this.vTrue);
 
-    const vFalse = this.createObject(this.getLiteralClassName(false));
-    vFalse.isFalse = true;
-    this.globalContext.put("false", vFalse);
+    this.globalContext.put("false", this.vFalse);
 
     for (const cls of stdClassLibrary) {
       this.initializeClass(cls.name, cls.superClass, cls.ivars);
@@ -148,9 +114,11 @@ export class VirtualMachine {
     superClassName: string,
     addlIvars: string[] = [],
   ) {
-    const superClass = this.globalContext.at(superClassName);
-    const ivars = [...superClass.ivars, ...addlIvars];
-    const vClass = this.createObject("Class", ivars);
+    const vClass = VirtualObject.stubClassObject(
+      this,
+      superClassName,
+      addlIvars,
+    );
     this.globalContext.put(className, vClass);
   }
 
@@ -255,7 +223,6 @@ export class VirtualMachine {
 
     const vArgsAndTemps = this.createObject(
       "Array",
-      [],
       new Array(argCount.primitiveValue + tempCount.primitiveValue),
     );
 
@@ -295,7 +262,7 @@ export class VirtualMachine {
     receiver: VirtualObject,
     closure: VirtualObject,
   ) {
-    context.setVarWithName("evalStack", this.createObject("Array", [], []));
+    context.setVarWithName("evalStack", this.createObject("Array", []));
     context.setVarWithName("instructionByteIndex", this.asLiteral(0));
     context.setVarWithName("receiver", receiver);
     context.setVarWithName("closure", closure);
