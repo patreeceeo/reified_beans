@@ -1,4 +1,4 @@
-import { BindingError, invariant, RangeError } from "./errors";
+import { BindingError, invariant, raise, RangeError } from "./errors";
 import { Dict } from "./generics";
 import {
   runtimeTypeAnyJsLiteral,
@@ -15,7 +15,6 @@ export class VirtualObject {
   isFalse = false;
 
   private vClassCached?: VirtualObject;
-  private vNilCached?: VirtualObject;
   private vars: VirtualObject[] = [];
   private _primitiveValue: AnyPrimitiveJsValue = undefined;
 
@@ -24,13 +23,6 @@ export class VirtualObject {
       this.vClassCached = this.vm.globalContext.at(this.classKey);
     }
     return this.vClassCached;
-  }
-
-  get vNil() {
-    if (this.vNilCached === undefined) {
-      this.vNilCached = this.vm.asLiteral(undefined);
-    }
-    return this.vNilCached;
   }
 
   get primitiveValue() {
@@ -51,6 +43,77 @@ export class VirtualObject {
 
   // (TODO:reflect) this should be an instance variable of class objects
   methodDict = Dict<VirtualObject>();
+
+  static createNil(vm: VirtualMachine) {
+    const classKey = this.getLiteralClassKey(undefined);
+    const vo = VirtualObject.createObject(vm, classKey);
+    vo.isNil = true;
+    return vo;
+  }
+
+  static createTrue(vm: VirtualMachine) {
+    const classKey = this.getLiteralClassKey(true);
+    const vo = VirtualObject.createObject(vm, classKey);
+    vo.isTrue = true;
+    return vo;
+  }
+
+  static createFalse(vm: VirtualMachine) {
+    const classKey = this.getLiteralClassKey(false);
+    const vo = VirtualObject.createObject(vm, classKey);
+    vo.isFalse = true;
+    return vo;
+  }
+
+  static createObject(
+    vm: VirtualMachine,
+    classKey: string,
+    literalValue?: AnyLiteralJsValue,
+  ) {
+    return new VirtualObject(vm, classKey, [], literalValue);
+  }
+
+  /**
+   * As part of bootstrapping the VM, we define some classes, including the class Class itself
+   * and all of its superclasses. This method stubs out a class object with the given superclass,
+   * but does not set the class's superClass instance variable, because that's not possible until
+   * the class Class is defined, so the superClass must be set later.
+   */
+  static stubClassObject(
+    vm: VirtualMachine,
+    superClassName: string,
+    addlIvars: string[],
+  ) {
+    const superClass = vm.globalContext.at(superClassName);
+    const ivars = [...superClass.ivars, ...addlIvars];
+    return new VirtualObject(vm, "Class", ivars);
+  }
+
+  static getLiteralClassKey(value: AnyLiteralJsValue) {
+    if (value === true) {
+      return "True";
+    } else if (value === false) {
+      return "False";
+    } else {
+      switch (typeof value) {
+        case "string":
+          return "String";
+        case "number":
+          return "Number";
+        case "undefined":
+          return "UndefinedObject";
+        case "object":
+          invariant(Array.isArray(value), TypeError, "Array", String(value));
+          return "Array";
+        default:
+          raise(
+            TypeError,
+            "string | number | boolean | undefined",
+            typeof value,
+          );
+      }
+    }
+  }
 
   /**
    * @param classKey The unique name of my class
@@ -94,14 +157,14 @@ export class VirtualObject {
 
   readVar(id: number) {
     this.checkVarId(id);
-    return this.vars[id] ?? this.vNil;
+    return this.vars[id] ?? this.vm.vNil;
   }
 
   readIndex<PrimitiveType = AnyLiteralJsValue>(
     index: number,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
-    const result = this.vars[index + this.namedVarCount] ?? this.vNil;
+    const result = this.vars[index + this.namedVarCount] ?? this.vm.vNil;
     expectedType.check(result, `index ${index}`);
     return result;
   }
