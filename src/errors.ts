@@ -50,32 +50,6 @@ export class TypeError extends Error {
   }
 }
 
-export class Validator<T> {
-  constructor(
-    readonly valueDescription: string,
-    readonly isValid: (value: T) => boolean,
-  ) {}
-  validate(value: T) {
-    invariant(
-      this.isValid(value),
-      ValidationError,
-      this.valueDescription,
-      String(value),
-    );
-  }
-}
-
-export const anyValidator = new Validator("anything", () => true);
-
-export class ValidationError extends Error {
-  constructor(
-    readonly valueDescription: string,
-    readonly valueString: string,
-  ) {
-    super(`I expected ${valueDescription}, got ${valueString}`);
-  }
-}
-
 export class NotImplementedError extends Error {
   constructor(
     readonly classKey: string,

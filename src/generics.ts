@@ -1,5 +1,3 @@
-import { anyValidator, invariant, RangeError, Validator } from "./errors";
-
 export type Stack<T> = Pick<Array<T>, "push" | "pop" | "length"> & {
   peek: () => T | undefined;
   // verifyIntegrity: () => void;
@@ -44,44 +42,3 @@ export function Dict<T>() {
 }
 
 export type ReadonlyDict<T> = Readonly<Record<string, T>>;
-
-export interface FixedLengthArray<T> {
-  length: number;
-  at(index: number): T;
-  put(index: number, value: T): void;
-}
-
-type ArrayLikeConstructor<T> = new (length: number) => ArrayLike<T>;
-
-export function FixedLengthArray<
-  T,
-  ArrayClass extends ArrayLikeConstructor<T> = ArrayLikeConstructor<T>,
->(
-  length: number,
-  arrayClass: ArrayClass,
-  validator = anyValidator as Validator<T>,
-): FixedLengthArray<T> {
-  return Object.assign(new arrayClass(length), {
-    at(this: T[], index: number) {
-      invariant(
-        index >= 0 && index < this.length,
-        RangeError,
-        index,
-        0,
-        this.length - 1,
-      );
-      return this[index];
-    },
-    put(this: T[], index: number, value: T) {
-      validator.validate(value);
-      invariant(
-        index >= 0 && index < this.length,
-        RangeError,
-        index,
-        0,
-        this.length - 1,
-      );
-      this[index] = value;
-    },
-  }) as FixedLengthArray<T>;
-}
