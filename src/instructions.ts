@@ -591,18 +591,21 @@ export function jumpRelative(
     "instructionByteRange",
     runtimeTypeNotNil,
   );
-  const instructionEnd = instructionRange.readVarWithName(
+  const min = instructionRange.readVarWithName(
+    "start",
+    runtimeTypePositiveNumber,
+  ).primitiveValue;
+  const max = instructionRange.readVarWithName(
     "end",
     runtimeTypePositiveNumber,
-  );
+  ).primitiveValue;
   const newIndexPrimitive = instructionByteIndex.primitiveValue + byteOffset;
 
   invariant(
-    newIndexPrimitive >= 0 &&
-      newIndexPrimitive <= instructionEnd.primitiveValue,
+    newIndexPrimitive >= min && newIndexPrimitive <= max,
     RangeError,
-    0,
-    instructionEnd.primitiveValue,
+    min,
+    max,
     newIndexPrimitive,
     "a valid instruction index",
   );

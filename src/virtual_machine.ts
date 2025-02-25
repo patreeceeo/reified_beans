@@ -122,13 +122,26 @@ export class VirtualMachine {
     this.globalContext.put(className, vClass);
   }
 
-  peekNextReceiver() {
+  get evalStack() {
     const context = this.contextStack.peek();
-    invariant(context, StackUnderflowError, "contextStack");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const result = evalStack.stackTop;
-    invariant(result, StackUnderflowError, "evalStack");
+    invariant(context, StackUnderflowError, "context");
+    return context.readVarWithName("evalStack", runtimeTypeNotNil);
+  }
+
+  peekNextReceiver() {
+    const result = this.evalStack.stackTop;
+    invariant(result, StackUnderflowError, "evaluation");
     return result;
+  }
+
+  popNextReceiver() {
+    const result = this.evalStack.stackPop();
+    invariant(result, StackUnderflowError, "evaluation");
+    return result;
+  }
+
+  restoreReceiver(receiver: VirtualObject) {
+    this.evalStack.stackPush(receiver);
   }
 
   /** (TODO:reflect) onNotUnderstood arg should refer to interpretable instructions */
@@ -138,10 +151,12 @@ export class VirtualMachine {
     }
 
     // try non-primative method
-    const closure = this.peekNextReceiver().getMethod(selector);
+    const receiver = this.popNextReceiver();
+    const closure = receiver.getMethod(selector);
     if (closure !== undefined) {
-      this.invokeAsMethod(closure);
+      this.invokeAsMethod(receiver, closure);
     } else {
+      this.restoreReceiver(receiver);
       onNotUnderstood();
     }
   }
@@ -156,25 +171,6 @@ export class VirtualMachine {
         );
       });
     });
-  }
-
-  // TODO: maybe this should be a method on ClosureContext?
-  populateArgs(
-    closure: VirtualObject,
-    senderContext: VirtualObject,
-    args: VirtualObject,
-  ) {
-    const argCount = closure.readVarWithName(
-      "argCount",
-      runtimeTypePositiveNumber,
-    );
-    const evalStack = senderContext.readVarWithName(
-      "evalStack",
-      runtimeTypeNotNil,
-    );
-    for (let index = 0; index < argCount.primitiveValue; index++) {
-      args.setIndex(index, evalStack.stackPop()!);
-    }
   }
 
   createClosure(description: ClosureDescriptionJs = {}): VirtualObject {
@@ -281,19 +277,43 @@ export class VirtualMachine {
     }
   }
 
+  // (TODO:organize) move to ./contexts
+  populateArgs(context: VirtualObject, closure: VirtualObject) {
+    const argCount = closure.readVarWithName(
+      "argCount",
+      runtimeTypePositiveNumber,
+    );
+    if (argCount.primitiveValue === 0) {
+      return;
+    }
+
+    const args = context.readVarWithName("argsAndTemps", runtimeTypeNotNil);
+
+    const { evalStack } = this;
+
+    for (let index = 0; index < argCount.primitiveValue; index++) {
+      args.setIndex(index, evalStack.stackPop()!);
+    }
+  }
+
   /** (TODO:reflect) implement in interpreted language? */
-  invokeAsMethod(closure: VirtualObject) {
-    const sender = this.contextStack.peek();
-    invariant(sender, StackUnderflowError, "context");
-    const evalStack = sender.readVarWithName("receiver", runtimeTypeNotNil);
-    const receiver = evalStack.stackPop()!;
+  invokeAsMethod(receiver: VirtualObject, closure: VirtualObject) {
     const context = this.createMethodContext(receiver, closure);
-    const argsAndTemps = context.readVarWithName(
-      "argsAndTemps",
+    const instructionByteRange = closure.readVarWithName(
+      "instructionByteRange",
       runtimeTypeNotNil,
     );
-    this.populateArgs(closure, sender, argsAndTemps);
+    const instructionByteOffset = instructionByteRange.readVarWithName(
+      "start",
+      runtimeTypePositiveNumber,
+    );
+
+    this.populateArgs(context, closure);
     this.contextStack.push(context);
+    // jump to the first instruction
+    context.setVarWithName("instructionByteIndex", instructionByteOffset);
+
+    return context;
   }
 
   sendPrimative(selector: string) {
