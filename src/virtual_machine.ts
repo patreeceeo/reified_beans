@@ -5,7 +5,7 @@ import { Dict, Stack } from "./generics";
 import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
 import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
-import stdClassLibrary from "./std_class_library";
+import { classDescriptions } from "lib/index";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
@@ -89,11 +89,11 @@ export class VirtualMachine {
 
     this.globalContext.put("false", this.vFalse);
 
-    for (const cls of stdClassLibrary) {
+    for (const cls of classDescriptions) {
       this.initializeClass(cls.name, cls.superClass, cls.ivars);
     }
 
-    for (const cls of stdClassLibrary) {
+    for (const cls of classDescriptions) {
       const vClass = this.globalContext.at(cls.name);
       vClass.setVarWithName("className", this.asLiteral(cls.name));
       vClass.setVarWithName(

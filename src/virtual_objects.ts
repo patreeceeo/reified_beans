@@ -1,3 +1,4 @@
+import type { ClosureDescriptionJs } from "./closures";
 import { BindingError, invariant, raise, RangeError } from "./errors";
 import { Dict } from "./generics";
 import {
@@ -223,4 +224,12 @@ export class VirtualObject {
   stackPush(object: VirtualObject) {
     return this.vars.push(object);
   }
+}
+
+export interface ClassDescription {
+  name: string;
+  superClass: string;
+  ivars: string[];
+  classComment: string;
+  methodDict: Record<string, ClosureDescriptionJs>;
 }
