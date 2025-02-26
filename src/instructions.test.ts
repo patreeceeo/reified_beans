@@ -246,14 +246,6 @@ const additionalTests = {
     });
 
     test("Fail if the closure or context is lacking the specified variable", () => {
-      if (target === ContextVariable.ReceiverVar) {
-        // (TODO:testing)
-        // At the moment, there's no way for a VirtualObject to know how many
-        // instance variables it has, since it doesn't directly reference its class,
-        // so we can't test that here.
-        // Time to revisit!
-        return;
-      }
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), emptyClosure);
 
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
@@ -301,15 +293,6 @@ const additionalTests = {
     });
 
     test("Fail if the closure or context is lacking the specified variable", () => {
-      if (target === ContextVariable.ReceiverVar) {
-        // (TODO:testing)
-        // At the moment, there's no way for a VirtualObject to know how many
-        // instance variables it has, since it doesn't directly reference its class,
-        // so we can't test that here.
-        //
-        // Time to revisit!
-        return;
-      }
       const emptyClosure = vm.createClosure();
       const emptyContext = vm.invokeAsMethod(receiver, emptyClosure);
 
