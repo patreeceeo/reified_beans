@@ -4,15 +4,13 @@ import { runtimeTypeNotNil } from "./runtime_type_checks";
 
 describe("Standard Class Library", () => {
   describe("Array", () => {
-    test.only("at:", () => {
+    test("at:", () => {
       const vm = new VirtualMachine();
       const array = vm.asLiteral([86, 79, 305]);
       const closure = vm.createClosure();
       const receiver = vm.asLiteral(undefined);
-      const context = vm.createMethodContext(receiver, closure);
+      const context = vm.invokeAsMethod(receiver, closure);
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-
-      vm.contextStack.push(context);
 
       evalStack.stackPush(vm.asLiteral(2));
       evalStack.stackPush(array);
