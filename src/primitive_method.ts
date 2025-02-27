@@ -98,6 +98,21 @@ primitiveMethodDict["at:"] = {
   },
 };
 
+primitiveMethodDict["value"] = {
+  attempt(vm: VirtualMachine): boolean {
+    const { evalStack } = vm;
+    const closure = evalStack.stackPop();
+    const context = vm.contextStack.peek();
+    invariant(context, StackUnderflowError, "context");
+    const receiver = context.readVarWithName("receiver", runtimeTypeNotNil);
+
+    invariant(closure, StackUnderflowError, "evaluation");
+
+    vm.invokeAsMethod(receiver, closure);
+    return true;
+  },
+};
+
 function loadArithmeticOpArgs(
   context: VirtualObject,
   target: [number, number],

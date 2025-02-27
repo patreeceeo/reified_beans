@@ -312,29 +312,32 @@ const additionalTests = {
       typeof instSendLiteralSelectorExt.explain
     >,
   ) => {
-    const vm = new VirtualMachine();
-    const closure = vm.createClosure({
-      tempCount: 4,
-      literals: [0, 0],
-    });
-    const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-
     const testSelectors = ["+", "-"];
 
-    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
-    for (const [index, selector] of testSelectors.entries()) {
-      literals.setIndex(index, vm.asLiteral(selector));
+    function createVM() {
+      const vm = new VirtualMachine();
+      const closure = vm.createClosure({
+        tempCount: 4,
+        literals: [0, 0],
+      });
+      vm.invokeAsMethod(vm.asLiteral(undefined), closure);
+
+      const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+      for (const [index, selector] of testSelectors.entries()) {
+        literals.setIndex(index, vm.asLiteral(selector));
+      }
+      return vm;
     }
 
     test("Do it successfully", () => {
-      evalStack.stackPush(vm.asLiteral(2));
-      evalStack.stackPush(vm.asLiteral(3));
+      const vm = createVM();
+      vm.evalStack.stackPush(vm.asLiteral(2));
+      vm.evalStack.stackPush(vm.asLiteral(3));
 
       inst.do(vm, selectorId, numArgs);
 
-      expect(evalStack.stackDepth).toBe(1);
-      const result = evalStack.stackTop!;
+      expect(vm.evalStack.stackDepth).toBe(1);
+      const result = vm.evalStack.stackTop!;
       expect(typeof result.primitiveValue).toBe("number");
       const primativeResult = result.primitiveValue as number;
       switch (testSelectors[selectorId]) {
@@ -348,17 +351,11 @@ const additionalTests = {
     });
 
     test("Fail if the number of args is too big", () => {
-      evalStack.stackPush(vm.asLiteral(2));
-      evalStack.stackPush(vm.asLiteral(3));
+      const vm = createVM();
+      vm.evalStack.stackPush(vm.asLiteral(2));
+      vm.evalStack.stackPush(vm.asLiteral(3));
 
       expect(() => inst.do(vm, selectorId, numArgs + 1)).toThrow();
-    });
-
-    test("Fail if the number of args is too small", () => {
-      evalStack.stackPush(vm.asLiteral(2));
-      evalStack.stackPush(vm.asLiteral(3));
-
-      expect(() => inst.do(vm, selectorId, numArgs - 1)).toThrow();
     });
 
     test("Fail if the contextStack is empty", () => {

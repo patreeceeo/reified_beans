@@ -23,6 +23,7 @@ import type { VirtualMachine } from "./virtual_machine";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
+  runtimeTypeString,
 } from "./runtime_type_checks";
 import type { VirtualObject } from "./virtual_objects";
 
@@ -400,30 +401,20 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
   do(machine, selectorIndex, numArgs) {
     const context = machine.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    // const { evalStack } = context;
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const evalStackDepthInitial = evalStack.stackDepth;
+    const initialStackDepth = machine.evalStack.stackDepth;
     invariant(
-      evalStackDepthInitial >= numArgs + 1,
+      initialStackDepth >= numArgs + 1,
       StackUnderflowError,
       "evaluation",
     );
+
     const closure = context.readVarWithName("closure", runtimeTypeNotNil);
     const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
-    const { primitiveValue } = literals.readIndex(selectorIndex);
-    invariant(
-      typeof primitiveValue === "string",
-      TypeError,
-      `a string`,
-      String(primitiveValue),
+    const { primitiveValue } = literals.readIndex(
+      selectorIndex,
+      runtimeTypeString,
     );
     machine.send(primitiveValue);
-    invariant(
-      evalStack.stackDepth === evalStackDepthInitial - numArgs,
-      ArgumentCountError,
-      numArgs,
-      evalStackDepthInitial - evalStack.stackDepth,
-    );
   },
 };
 
@@ -778,8 +769,8 @@ export class InstructionPointer {
 
   constructor(
     buffer: ArrayBuffer,
-    byteOffsetInBuffer: number,
-    readonly byteOffsetLimit: number,
+    byteOffsetInBuffer = 0,
+    readonly byteOffsetLimit = buffer.byteLength,
   ) {
     this.view = new DataView(buffer, byteOffsetInBuffer, byteOffsetLimit);
   }

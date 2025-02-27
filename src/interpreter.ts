@@ -1,9 +1,5 @@
 import { invariant, StackUnderflowError } from "./errors";
-import {
-  getNextInstructionCodeByteOffset,
-  peekInstructionCodeFromDataView,
-  reifyInstruction,
-} from "./instructions";
+import { InstructionPointer, reifyInstruction } from "./instructions";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
@@ -11,9 +7,31 @@ import {
 import type { VirtualMachine } from "./virtual_machine";
 
 export class Interpreter {
-  instructionView: DataView;
+  instructionPointer: InstructionPointer;
   constructor(readonly vm: VirtualMachine) {
-    this.instructionView = new DataView(vm.instructionBuffer);
+    this.instructionPointer = new InstructionPointer(vm.instructionBuffer);
+  }
+
+  get byteOffsetOfLastInstructionInCurrentContext() {
+    const context = this.vm.contextStack.peek();
+    invariant(context !== undefined, StackUnderflowError, "context");
+    const closure = context.readVarWithName("closure", runtimeTypeNotNil);
+    const instructionRange = closure.readVarWithName(
+      "instructionByteRange",
+      runtimeTypeNotNil,
+    );
+    return instructionRange.readVarWithName("end", runtimeTypePositiveNumber)
+      .primitiveValue;
+  }
+
+  private syncInstructionPointer() {
+    const context = this.vm.contextStack.peek();
+    invariant(context !== undefined, StackUnderflowError, "context");
+    const instructionByteIndex = context.readVarWithName(
+      "instructionByteIndex",
+      runtimeTypePositiveNumber,
+    );
+    this.instructionPointer.byteOffset = instructionByteIndex.primitiveValue;
   }
 
   /**
@@ -23,58 +41,38 @@ export class Interpreter {
     const { vm } = this;
     const context = vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
-    const instructionIndex = context.readVarWithName(
-      "instructionByteIndex",
-      runtimeTypePositiveNumber,
-    );
-    const closure = context.readVarWithName("closure", runtimeTypeNotNil);
-    const instructionRange = closure.readVarWithName(
-      "instructionByteRange",
-      runtimeTypeNotNil,
-    );
-    const instructionEnd = instructionRange.readVarWithName(
-      "end",
-      runtimeTypePositiveNumber,
-    );
-    const instructionCode = peekInstructionCodeFromDataView(
-      this.instructionView,
-      instructionIndex.primitiveValue,
-    );
+    const instructionCode = this.instructionPointer.peek();
     const instruction = reifyInstruction(instructionCode);
+    const args = [] as number[];
 
-    instruction.do(vm);
+    instruction.readArgs(this.instructionPointer, args);
 
-    const nextInstructionIndex = getNextInstructionCodeByteOffset(
-      instructionIndex.primitiveValue,
-    );
+    instruction.do(vm, ...args);
+
     context.setVarWithName(
       "instructionByteIndex",
-      vm.asLiteral(nextInstructionIndex),
+      vm.asLiteral(this.instructionPointer.byteOffset),
     );
 
-    const finished =
-      instructionIndex.primitiveValue >= instructionEnd.primitiveValue;
-
-    if (finished) {
-      // finished with current context
-      // return stack top to caller
-      const poppedContext = this.vm.contextStack.pop()!;
-      const poppedEvalStack = poppedContext.readVarWithName(
-        "evalStack",
-        runtimeTypeNotNil,
-      );
-      if (vm.contextStack.length === 0) {
+    while (
+      this.instructionPointer.byteOffset >=
+      this.byteOffsetOfLastInstructionInCurrentContext
+    ) {
+      if (vm.contextStack.length === 1) {
         return false;
       }
-      const newContext = this.vm.contextStack.peek()!;
-      const newEvalStack = newContext.readVarWithName(
-        "evalStack",
-        runtimeTypeNotNil,
-      );
-      newEvalStack.stackPush(
+      // finished with current context
+      // return stack top to caller
+      const poppedEvalStack = vm.evalStack;
+      vm.contextStack.pop();
+
+      this.syncInstructionPointer();
+
+      vm.evalStack.stackPush(
         poppedEvalStack.stackTop ?? this.vm.asLiteral(undefined),
       );
     }
+    return true;
   }
 
   run() {

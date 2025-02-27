@@ -144,6 +144,14 @@ export class VirtualMachine {
     this.evalStack.stackPush(receiver);
   }
 
+  sendPrimative(selector: string) {
+    const primativeMethod = primitiveMethodDict[selector];
+    if (primativeMethod === undefined) {
+      return false;
+    }
+    return primativeMethod.attempt(this);
+  }
+
   /** (TODO:reflect) onNotUnderstood arg should refer to interpretable instructions */
   basicSend(selector: string, onNotUnderstood: () => void) {
     if (this.sendPrimative(selector)) {
@@ -314,13 +322,5 @@ export class VirtualMachine {
     context.setVarWithName("instructionByteIndex", instructionByteOffset);
 
     return context;
-  }
-
-  sendPrimative(selector: string) {
-    const primativeMethod = primitiveMethodDict[selector];
-    if (primativeMethod === undefined) {
-      return false;
-    }
-    return primativeMethod.attempt(this);
   }
 }
