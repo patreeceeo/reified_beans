@@ -1,5 +1,5 @@
 import { invariant, StackUnderflowError } from "./errors";
-import { InstructionPointer, reifyInstruction } from "./instructions";
+import { reifyInstruction } from "./instructions";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
@@ -7,10 +7,7 @@ import {
 import type { VirtualMachine } from "./virtual_machine";
 
 export class Interpreter {
-  instructionPointer: InstructionPointer;
-  constructor(readonly vm: VirtualMachine) {
-    this.instructionPointer = new InstructionPointer(vm.instructionBuffer);
-  }
+  constructor(readonly vm: VirtualMachine) {}
 
   get byteOffsetOfLastInstructionInCurrentContext() {
     const context = this.vm.contextStack.peek();
@@ -31,7 +28,7 @@ export class Interpreter {
       "instructionByteIndex",
       runtimeTypePositiveNumber,
     );
-    this.instructionPointer.byteOffset = instructionByteIndex.primitiveValue;
+    this.vm.instructionPointer.byteOffset = instructionByteIndex.primitiveValue;
   }
 
   /**
@@ -39,23 +36,26 @@ export class Interpreter {
    */
   step() {
     const { vm } = this;
+    const { instructionPointer } = vm;
     const context = vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
-    const instructionCode = this.instructionPointer.peek();
+    const instructionCode = instructionPointer.peek();
     const instruction = reifyInstruction(instructionCode);
     const args = [] as number[];
+    const offset = instructionPointer.byteOffset;
 
-    instruction.readArgs(this.instructionPointer, args);
+    instruction.readArgs(instructionPointer, args);
 
+    console.log(offset, ":", instruction.explain(...args));
     instruction.do(vm, ...args);
 
     context.setVarWithName(
       "instructionByteIndex",
-      vm.asLiteral(this.instructionPointer.byteOffset),
+      vm.asLiteral(instructionPointer.byteOffset),
     );
 
     while (
-      this.instructionPointer.byteOffset >=
+      instructionPointer.byteOffset >=
       this.byteOffsetOfLastInstructionInCurrentContext
     ) {
       if (vm.contextStack.length === 1) {

@@ -109,12 +109,13 @@ function validateTempVarOffset(offset: number, context: VirtualObject): void {
     "tempCount",
     runtimeTypePositiveNumber,
   ).primitiveValue;
+  const argAndTempCount = argCount + tempCount;
   invariant(
-    offset >= 0 && offset < argCount + tempCount,
+    offset >= 0 && offset < argAndTempCount,
     RangeError,
     offset,
     0,
-    argCount + tempCount,
+    argAndTempCount,
     "temp index",
   );
 }

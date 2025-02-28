@@ -595,9 +595,9 @@ export function jumpRelative(
   invariant(
     newIndexPrimitive >= min && newIndexPrimitive <= max,
     RangeError,
+    newIndexPrimitive,
     min,
     max,
-    newIndexPrimitive,
     "a valid instruction index",
   );
 

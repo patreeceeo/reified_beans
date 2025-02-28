@@ -233,6 +233,7 @@ export class VirtualMachine {
     context.setVarWithName("argsAndTemps", vArgsAndTemps);
 
     this.initializeLocalContextForClosureLiterals(closure, context);
+
     return context;
   }
 
@@ -267,9 +268,22 @@ export class VirtualMachine {
     closure: VirtualObject,
   ) {
     context.setVarWithName("evalStack", this.createObject("Array", []));
-    context.setVarWithName("instructionByteIndex", this.asLiteral(0));
     context.setVarWithName("receiver", receiver);
     context.setVarWithName("closure", closure);
+    this.setContextByteIndex(context, closure);
+  }
+
+  setContextByteIndex(context: VirtualObject, closure: VirtualObject) {
+    const instructionByteRange = closure.readVarWithName(
+      "instructionByteRange",
+      runtimeTypeNotNil,
+    );
+    const instructionByteOffset = instructionByteRange.readVarWithName(
+      "start",
+      runtimeTypePositiveNumber,
+    );
+
+    context.setVarWithName("instructionByteIndex", instructionByteOffset);
   }
 
   initializeLocalContextForClosureLiterals(
@@ -307,19 +321,15 @@ export class VirtualMachine {
   /** (TODO:reflect) implement in interpreted language? */
   invokeAsMethod(receiver: VirtualObject, closure: VirtualObject) {
     const context = this.createMethodContext(receiver, closure);
-    const instructionByteRange = closure.readVarWithName(
-      "instructionByteRange",
-      runtimeTypeNotNil,
-    );
-    const instructionByteOffset = instructionByteRange.readVarWithName(
-      "start",
+    const instructionByteIndex = context.readVarWithName(
+      "instructionByteIndex",
       runtimeTypePositiveNumber,
-    );
+    ).primitiveValue;
 
     this.populateArgs(context, closure);
     this.contextStack.push(context);
     // jump to the first instruction
-    context.setVarWithName("instructionByteIndex", instructionByteOffset);
+    this.instructionPointer.byteOffset = instructionByteIndex;
 
     return context;
   }
