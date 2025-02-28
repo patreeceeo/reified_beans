@@ -25,7 +25,7 @@ describe("Standard Class Library", () => {
   });
 
   describe("True", () => {
-    test.only("ifTrue:", () => {
+    test("ifTrue:", () => {
       const vm = new VirtualMachine();
       const interpreter = new Interpreter(vm);
       const closure = vm.createClosure();
