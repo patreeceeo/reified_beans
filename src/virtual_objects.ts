@@ -10,7 +10,10 @@ import type { VirtualMachine } from "./virtual_machine";
 export type AnyPrimitiveJsValue = string | number | boolean | undefined;
 export type AnyLiteralJsValue = AnyPrimitiveJsValue | AnyLiteralJsValue[];
 
+let id = 0;
+
 export class VirtualObject {
+  readonly id = id++;
   isNil = false;
   isTrue = false;
   isFalse = false;
