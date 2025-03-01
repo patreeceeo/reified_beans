@@ -358,6 +358,8 @@ const additionalTests = {
       expect(() => inst.do(vm, selectorId, numArgs + 1)).toThrow();
     });
 
+    // TODO test that it verifies that the method consumed the correct number of arguments
+
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
       expect(() => inst.do(vm, selectorId, numArgs)).toThrow();
@@ -485,14 +487,13 @@ const additionalTests = {
         },
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
       const previousInsturctionByteOffset = context.readVarWithName(
         "instructionByteIndex",
         runtimeTypePositiveNumber,
       ).primitiveValue;
 
       jumpRelative(context, 5);
-      evalStack.stackPush(vm.asLiteral(true));
+      vm.evalStack.stackPush(vm.asLiteral(true));
 
       inst.do(vm, offset);
 
