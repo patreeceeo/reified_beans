@@ -5,7 +5,7 @@ import { Dict, Stack } from "./generics";
 import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
 import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
-import { classDescriptions } from "lib/index";
+import { classDescriptions } from "./std_class_library";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
