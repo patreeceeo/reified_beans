@@ -212,7 +212,7 @@ export class VirtualObject {
     }
   }
 
-  get stackTop() {
+  get stackTop(): VirtualObject | undefined {
     return this.vars[this.maxIndex];
   }
 
