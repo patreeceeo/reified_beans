@@ -140,16 +140,16 @@ class JumpInstruction extends NewInstruction<[number]> {
   }
   do(vm: VirtualMachine) {
     const context = vm.contextStack.peek();
-    const [byteOffset] = this.args;
+    const [offset] = this.args;
     invariant(context, StackUnderflowError, "context");
-    jumpRelative(context, byteOffset, vm);
+    jumpRelative(context, offset, vm);
   }
 }
 
 /**
  * If the object on the top of the Stack is True, pop it and jump the given number of bytes.
  * Otherwise, continue to the next instruction.
- * @param byteOffset The number of bytes to jump, can be negative.
+ * @param offset The number of instructions to jump, can be negative.
  */
 class PopAndJumpOnTrueInstruction extends NewInstruction<[number]> {
   explain() {
@@ -158,12 +158,12 @@ class PopAndJumpOnTrueInstruction extends NewInstruction<[number]> {
   do(vm: VirtualMachine) {
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const [byteOffset] = this.args;
+    const [offset] = this.args;
     const condition = vm.evalStack.stackTop;
     invariant(condition, StackUnderflowError, "evaluation");
     if (condition.isTrue) {
       vm.evalStack.stackPop();
-      jumpRelative(context, byteOffset, vm);
+      jumpRelative(context, offset, vm);
     }
   }
 }
@@ -171,7 +171,7 @@ class PopAndJumpOnTrueInstruction extends NewInstruction<[number]> {
 /**
  * If the object on the top of the Stack is False, pop it and jump the given number of bytes.
  * Otherwise, continue to the next instruction.
- * @param byteOffset The number of bytes to jump, can be negative.
+ * @param offset The number of bytes to jump, can be negative.
  */
 class PopAndJumpOnFalseInstruction extends NewInstruction<[number]> {
   explain() {
@@ -180,12 +180,12 @@ class PopAndJumpOnFalseInstruction extends NewInstruction<[number]> {
   do(vm: VirtualMachine) {
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const [byteOffset] = this.args;
+    const [offset] = this.args;
     const condition = vm.evalStack.stackTop;
     invariant(condition, StackUnderflowError, "evaluation");
     if (condition.isFalse) {
       vm.evalStack.stackPop();
-      jumpRelative(context, byteOffset, vm);
+      jumpRelative(context, offset, vm);
     }
   }
 }
