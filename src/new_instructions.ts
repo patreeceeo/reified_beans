@@ -21,6 +21,11 @@ abstract class NewInstruction<Params extends number[]> {
   abstract do(vm: VirtualMachine): void;
 }
 
+/**
+ * Push a special value onto the eval Stack
+ * @param value The special value to Push
+ * @see SpecialPushValue
+ */
 class PushSpecialValueInstruction extends NewInstruction<[SpecialPushValue]> {
   explain() {
     return `Push special value ${SpecialPushValue[this.args[0]]}`;
@@ -34,6 +39,11 @@ class PushSpecialValueInstruction extends NewInstruction<[SpecialPushValue]> {
   }
 }
 
+/**
+ * Return a special Value
+ * @param value The special value to return
+ * @see SpecialReturnValue
+ */
 class ReturnSpecialValueInstruction extends NewInstruction<
   [SpecialReturnValue]
 > {
@@ -47,6 +57,12 @@ class ReturnSpecialValueInstruction extends NewInstruction<
   }
 }
 
+/**
+ * Push an object onto the eval stack
+ * @param source The source of the object to push
+ * @param offset The offset from the source
+ * @see ContextValue
+ */
 class PushInstruction extends NewInstruction<[ContextValue, number]> {
   explain() {
     const [source, offset] = this.args;
@@ -59,6 +75,12 @@ class PushInstruction extends NewInstruction<[ContextValue, number]> {
   }
 }
 
+/**
+ * Store the object on the top of the stack in the indicated location
+ * @param target The target of the Store instruction
+ * @param offset The offset from the target
+ * @see ContextVariable
+ */
 class StoreInstruction extends NewInstruction<[ContextVariable, number]> {
   explain() {
     const [source, offset] = this.args;
@@ -72,6 +94,12 @@ class StoreInstruction extends NewInstruction<[ContextVariable, number]> {
   }
 }
 
+/**
+ * Pop the object from the top of the stack and store in the indicated location
+ * @param target The target of the PopAndStore instruction
+ * @param offset The offset from the target
+ * @see ContextVariable
+ */
 class PopAndStoreInstruction extends NewInstruction<[ContextVariable, number]> {
   explain() {
     const [source, offset] = this.args;
@@ -85,6 +113,12 @@ class PopAndStoreInstruction extends NewInstruction<[ContextVariable, number]> {
   }
 }
 
+/**
+ * Send a message using a literal selector with the given number of arguments.
+ * The receiver is taken off the stack, followed by the arguments.
+ * @param selector The index of the literal selector found in the method's literal array
+ * @param numArgs The number of arguments to the message
+ */
 class SendLiteralSelectorExtendedInstruction extends NewInstruction<
   [number, number]
 > {
@@ -114,6 +148,9 @@ class SendLiteralSelectorExtendedInstruction extends NewInstruction<
   }
 }
 
+/**
+ * Pop the object from the top of the Stack
+ */
 class PopInstruction extends NewInstruction<[]> {
   explain() {
     return "Pop";
@@ -123,6 +160,9 @@ class PopInstruction extends NewInstruction<[]> {
   }
 }
 
+/**
+ * Duplicate the object on the top of the Stack
+ */
 class DuplicateInstruction extends NewInstruction<[]> {
   explain() {
     return "Duplicate";
@@ -134,6 +174,9 @@ class DuplicateInstruction extends NewInstruction<[]> {
   }
 }
 
+/**
+ * Jump the given number of bytes, unconditionally.
+ */
 class JumpInstruction extends NewInstruction<[number]> {
   explain() {
     return `Jump to ${this.args[0]}`;
