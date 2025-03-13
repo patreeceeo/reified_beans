@@ -1,5 +1,4 @@
 import { invariant, StackUnderflowError } from "./errors";
-import { reifyInstruction } from "./instructions";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
@@ -24,11 +23,11 @@ export class Interpreter {
   private syncInstructionPointer() {
     const context = this.vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
-    const instructionByteIndex = context.readVarWithName(
+    const instructionIndex = context.readVarWithName(
       "instructionByteIndex",
       runtimeTypePositiveNumber,
     );
-    this.vm.instructionPointer.byteOffset = instructionByteIndex.primitiveValue;
+    this.vm.instructionPointer = instructionIndex.primitiveValue;
   }
 
   /**
@@ -36,28 +35,23 @@ export class Interpreter {
    */
   step() {
     const { vm } = this;
-    const { instructionPointer } = vm;
     const context = vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
-    const instructionCode = instructionPointer.peek();
-    const instruction = reifyInstruction(instructionCode);
-    const args = [] as number[];
-    const offset = instructionPointer.byteOffset;
+    const instruction = vm.instructions[vm.instructionPointer];
 
-    instruction.readArgs(instructionPointer, args);
+    console.log(vm.instructionPointer, ":", instruction.explain());
 
-    console.log(offset, ":", instruction.explain(...args));
-    instruction.do(vm, ...args);
+    // Increment instruction pointer before executing instruction
+    // so that the instruction can jump to the next instruction if needed
+    vm.instructionPointer += 1;
 
-    context.setVarWithName(
-      "instructionByteIndex",
-      vm.asLiteral(instructionPointer.byteOffset),
-    );
+    instruction.do(vm);
 
-    while (
-      instructionPointer.byteOffset >=
-      this.byteOffsetOfLastInstructionInCurrentContext
-    ) {
+    const ip = vm.instructionPointer;
+
+    context.setVarWithName("instructionByteIndex", vm.asLiteral(ip));
+
+    while (ip >= this.byteOffsetOfLastInstructionInCurrentContext) {
       if (vm.contextStack.length === 1) {
         return false;
       }

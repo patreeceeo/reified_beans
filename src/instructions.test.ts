@@ -1,113 +1,37 @@
 import { describe, expect, test } from "vitest";
 import {
-  type Instruction,
-  instPushSpecialVal,
-  instReturnSpecialVal,
-  instPush,
-  instStore,
-  instPopAndStore,
-  instSendLiteralSelectorExt,
-  instPop,
-  instDuplicate,
-  instJump,
-  instPopAndJumpOnTrue,
-  instPopAndJumpOnFalse,
-  reifyInstruction,
-  InstructionPointer,
-  jumpRelative,
-} from "./instructions";
-import { VirtualMachine } from "./virtual_machine";
-import {
   reifySpecialPushValue,
   reifySpecialReturnValue,
   SpecialPushValue,
   SpecialReturnValue,
 } from "./special_value";
-import { loadContextValue, ContextValue, ContextVariable } from "./contexts";
+import { ContextValue, ContextVariable, loadContextValue } from "./contexts";
+import { instruction, type Instruction } from "./instructions";
+import type { Dict } from "./generics";
+import { VirtualMachine } from "./virtual_machine";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
 } from "./runtime_type_checks";
+import type { AnyLiteralJsValue } from "./virtual_objects";
+import { jumpRelative } from "./jump";
 
-const array = new ArrayBuffer(4);
-const pointer = new InstructionPointer(array, 0, 4);
-
-function fillInstructionBuffer(
-  pointer: InstructionPointer,
-  byteLength: number,
+function invokeEmptyMethodOnLiteral(
+  vm: VirtualMachine,
+  receiver: AnyLiteralJsValue,
 ) {
-  for (let i = 0; i < byteLength / 2; i++) {
-    instPop.writeWith(pointer);
-  }
+  return vm.invokeAsMethod(vm.asLiteral(receiver), vm.createClosure());
 }
 
-const additionalTests = {
-  // [instPopAndStoreReceiverVar.type]: ([receiverVarOffset]: Parameters<typeof instPopAndStoreReceiverVar.explain>) => {
-  //   test("Do it successfully", () => {
-  //     const vm = new VirtualMachine();
-  //     const receiver = vm.asLiteral("receiver");
-  //     const context = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
-  //     const value = vm.asLiteral("value");
-  //     context.evalStack.push(value);
-  //     vm.contextStack.push(context);
+const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
+  PushSpecialValueInstruction: (inst) => {
+    const [specialValueId] = inst.args;
 
-  //     instPopAndStoreReceiverVar.do(vm, receiverVarOffset);
-
-  //     expect(receiver.getVar(receiverVarOffset)).toBe(value);
-  //     expect(context.evalStack.length).toBe(0);
-  //   });
-
-  //   test("Fail if the contextStack is empty", () => {
-  //     const vm = new VirtualMachine();
-  //     expect(() => instPopAndStoreReceiverVar.do(vm, receiverVarOffset)).toThrow();
-  //   })
-
-  //   test("Fail if the evalStack is empty", () => {
-  //     const vm = new VirtualMachine();
-  //     const receiver = vm.asLiteral("receiver");
-  //     const context = new ClosureContext(receiver, new Closure(0, 0, 0, vm));
-  //     vm.contextStack.push(context);
-  //     expect(() => instPopAndStoreReceiverVar.do(vm, receiverVarOffset)).toThrow();
-  //   });
-  // },
-
-  // [instPopAndStoreTempVar.type]: ([tempVarOffset]: Parameters<typeof instPopAndStore.explain>) => {
-  //   test("Do it successfully", () => {
-  //     const vm = new VirtualMachine();
-  //     const receiver = vm.asLiteral("receiver");
-  //     const context = new ClosureContext(receiver, new Closure(0, 4, 0, vm));
-  //     const value = vm.asLiteral("value");
-  //     context.evalStack.push(value);
-  //     vm.contextStack.push(context);
-  //     instPopAndStoreTempVar.do(vm, tempVarOffset);
-  //     expect(context.argsAndTemps.at(tempVarOffset)).toBe(value);
-  //     expect(context.evalStack.length).toBe(0);
-  //   });
-
-  //   test("Fail if the contextStack is empty", () => {
-  //     const vm = new VirtualMachine();
-  //     expect(() => instPopAndStoreTempVar.do(vm, 0)).toThrow();
-  //   });
-
-  //   test("Fail if the evalStack is empty", () => {
-  //     const vm = new VirtualMachine();
-  //     const receiver = vm.asLiteral("receiver");
-  //     const context = new ClosureContext(receiver, new Closure(0, 1, 0, vm));
-  //     vm.contextStack.push(context);
-  //     expect(() => instPopAndStoreTempVar.do(vm, 0)).toThrow();
-  //   });
-  // },
-
-  [instPushSpecialVal.type]: (
-    inst: typeof instPushSpecialVal,
-    [specialValueId]: Parameters<typeof instPushSpecialVal.explain>,
-  ) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const receiver = vm.asLiteral(undefined);
-      const context = vm.invokeAsMethod(receiver, vm.createClosure());
+      const context = invokeEmptyMethodOnLiteral(vm, true);
 
-      inst.do(vm, specialValueId);
+      inst.do(vm);
 
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
       expect(evalStack.stackTop).toBe(
@@ -117,51 +41,35 @@ const additionalTests = {
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, specialValueId)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
+  ReturnSpecialValueInstruction: (inst) => {
+    const [specialValueId] = inst.args;
 
-  [instReturnSpecialVal.type]: (
-    inst: typeof instReturnSpecialVal,
-    [specialValueId]: Parameters<typeof instReturnSpecialVal.explain>,
-  ) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
-      const context1 = vm.invokeAsMethod(
-        vm.asLiteral(true),
-        vm.createClosure(),
-      );
-      vm.invokeAsMethod(vm.asLiteral(true), vm.createClosure());
+      const context = invokeEmptyMethodOnLiteral(vm, true);
+      invokeEmptyMethodOnLiteral(vm, true);
 
-      inst.do(vm, specialValueId);
+      inst.do(vm);
 
-      const evalStack = context1.readVarWithName(
-        "evalStack",
-        runtimeTypeNotNil,
-      );
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
       expect(evalStack.stackTop).toBe(
         reifySpecialReturnValue(specialValueId, vm),
       );
       expect(vm.contextStack.length).toBe(1);
-      expect(vm.contextStack.peek()).toBe(context1);
+      expect(vm.contextStack.peek()).toBe(context);
     });
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, specialValueId)).toThrow();
-    });
-
-    test("Fail if there's only one context", () => {
-      const vm = new VirtualMachine();
-      vm.invokeAsMethod(vm.asLiteral(undefined), vm.createClosure());
-      expect(() => inst.do(vm, specialValueId)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
+  PushInstruction: (inst) => {
+    const [contextValue, index] = inst.args;
 
-  [instPush.type]: (
-    inst: typeof instPush,
-    [source, offset]: Parameters<typeof instPush.explain>,
-  ) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
@@ -181,14 +89,16 @@ const additionalTests = {
       literals.setIndex(3, vm.asLiteral("Object"));
       argsAndTemps.setIndex(3, vm.asLiteral(42));
       receiver.setVar(2, vm.asLiteral(true));
-      const value = loadContextValue(source, offset, vm);
-      inst.do(vm, source, offset);
+      const value = loadContextValue(contextValue, index, vm);
+
+      inst.do(vm);
+
       expect(evalStack.stackTop).toBe(value);
     });
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, source, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the closure or context is lacking the specified value", () => {
@@ -197,14 +107,11 @@ const additionalTests = {
 
       vm.invokeAsMethod(vm.asLiteral(undefined), emptyClosure);
 
-      expect(() => inst.do(vm, source, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instStore.type]: (
-    inst: typeof instStore,
-    [target, offset]: Parameters<typeof instStore.explain>,
-  ) => {
+  StoreInstruction: (inst) => {
+    const [target, offset] = inst.args;
     const vm = new VirtualMachine();
     const closure = vm.createClosure({
       tempCount: 4,
@@ -231,18 +138,18 @@ const additionalTests = {
     receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
-      inst.do(vm, target, offset);
+      inst.do(vm);
       expect(evalStack.stackTop).toBe(loadContextValue(target, offset, vm));
     });
 
     test("Fail if the contextStack is empty", () => {
       const vmt = new VirtualMachine();
-      expect(() => inst.do(vmt, target, offset)).toThrow();
+      expect(() => inst.do(vmt)).toThrow();
     });
 
     test("Fail if the evalStack is empty", () => {
       vm.invokeAsMethod(vm.asLiteral(undefined), emptyClosure);
-      expect(() => inst.do(vm, target, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the closure or context is lacking the specified variable", () => {
@@ -250,14 +157,11 @@ const additionalTests = {
 
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
       evalStack.stackPush(vm.asLiteral("value"));
-      expect(() => inst.do(vm, target, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instPopAndStore.type]: (
-    inst: typeof instPopAndStore,
-    [target, offset]: Parameters<typeof instPopAndStore.explain>,
-  ) => {
+  PopAndStoreInstruction: (inst) => {
+    const [target, offset] = inst.args;
     const vm = new VirtualMachine();
     const closure = vm.createClosure({
       tempCount: 4,
@@ -282,14 +186,14 @@ const additionalTests = {
     receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
-      inst.do(vm, target, offset);
+      inst.do(vm);
       expect(loadContextValue(target, offset, vm)).toBe(pushedValue);
       expect(evalStack.stackDepth).toBe(0);
     });
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, target, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the closure or context is lacking the specified variable", () => {
@@ -302,16 +206,11 @@ const additionalTests = {
       );
       evalStack.stackPush(pushedValue);
       vm.contextStack.push(emptyContext);
-      expect(() => inst.do(vm, target, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instSendLiteralSelectorExt.type]: (
-    inst: typeof instSendLiteralSelectorExt,
-    [selectorId, numArgs]: Parameters<
-      typeof instSendLiteralSelectorExt.explain
-    >,
-  ) => {
+  SendLiteralSelectorExtendedInstruction: (inst) => {
+    const [selectorId] = inst.args;
     const testSelectors = ["+", "-"];
 
     function createVM() {
@@ -334,7 +233,7 @@ const additionalTests = {
       vm.evalStack.stackPush(vm.asLiteral(2));
       vm.evalStack.stackPush(vm.asLiteral(3));
 
-      inst.do(vm, selectorId, numArgs);
+      inst.do(vm);
 
       expect(vm.evalStack.stackDepth).toBe(1);
       const result = vm.evalStack.stackTop!;
@@ -353,20 +252,18 @@ const additionalTests = {
     test("Fail if the number of args is too big", () => {
       const vm = createVM();
       vm.evalStack.stackPush(vm.asLiteral(2));
-      vm.evalStack.stackPush(vm.asLiteral(3));
 
-      expect(() => inst.do(vm, selectorId, numArgs + 1)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     // TODO test that it verifies that the method consumed the correct number of arguments
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, selectorId, numArgs)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instPop.type]: (inst: typeof instPop) => {
+  PopInstruction: (inst) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
@@ -390,13 +287,12 @@ const additionalTests = {
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
 
-      vm.invokeAsMethod(vm.asLiteral(undefined), vm.createClosure());
+      invokeEmptyMethodOnLiteral(vm, undefined);
 
       expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instDuplicate.type]: (inst: typeof instDuplicate) => {
+  DuplicateInstruction: (inst) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
@@ -426,18 +322,13 @@ const additionalTests = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instJump.type]: (
-    inst: typeof instJump,
-    [offset]: Parameters<typeof instJump.explain>,
-  ) => {
+  JumpInstruction: (inst) => {
+    const [offset] = inst.args;
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
       const previousInsturctionByteOffset = context.readVarWithName(
@@ -447,7 +338,7 @@ const additionalTests = {
 
       jumpRelative(context, 5);
 
-      inst.do(vm, offset);
+      inst.do(vm);
 
       expect(
         context.readVarWithName(
@@ -459,7 +350,7 @@ const additionalTests = {
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the offset is out of bounds", () => {
@@ -470,21 +361,16 @@ const additionalTests = {
 
       vm.invokeAsMethod(vm.asLiteral(undefined), closure);
 
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instPopAndJumpOnTrue.type]: (
-    inst: typeof instPopAndJumpOnTrue,
-    [offset]: Parameters<typeof instPopAndJumpOnTrue.explain>,
-  ) => {
+  PopAndJumpOnTrueInstruction: (inst) => {
+    const [offset] = inst.args;
     test("Do it successfully (with jump)", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
       const previousInsturctionByteOffset = context.readVarWithName(
@@ -495,7 +381,7 @@ const additionalTests = {
       jumpRelative(context, 5);
       vm.evalStack.stackPush(vm.asLiteral(true));
 
-      inst.do(vm, offset);
+      inst.do(vm);
 
       expect(
         context.readVarWithName(
@@ -509,9 +395,7 @@ const additionalTests = {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
@@ -522,7 +406,7 @@ const additionalTests = {
 
       evalStack.stackPush(vm.asLiteral(false));
 
-      inst.do(vm, offset);
+      inst.do(vm);
 
       expect(
         context.readVarWithName(
@@ -542,40 +426,33 @@ const additionalTests = {
 
       evalStack.stackPush(vm.asLiteral(true));
 
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
 
       vm.invokeAsMethod(vm.asLiteral(undefined), closure);
 
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
-
-  [instPopAndJumpOnFalse.type]: (
-    inst: typeof instPopAndJumpOnFalse,
-    [offset]: Parameters<typeof instPopAndJumpOnFalse.explain>,
-  ) => {
+  PopAndJumpOnFalseInstruction: (inst) => {
+    const [offset] = inst.args;
     test("Do it successfully (with jump)", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
@@ -587,7 +464,7 @@ const additionalTests = {
       jumpRelative(context, 5);
       evalStack.stackPush(vm.asLiteral(false));
 
-      inst.do(vm, offset);
+      inst.do(vm);
 
       expect(
         context.readVarWithName(
@@ -601,9 +478,7 @@ const additionalTests = {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
       const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
@@ -614,7 +489,7 @@ const additionalTests = {
 
       evalStack.stackPush(vm.asLiteral(true));
 
-      inst.do(vm, offset);
+      inst.do(vm);
 
       expect(
         context.readVarWithName(
@@ -634,93 +509,58 @@ const additionalTests = {
 
       evalStack.stackPush(vm.asLiteral(false));
 
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the contextStack is empty", () => {
       const vm = new VirtualMachine();
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
 
     test("Fail if the evalStack is empty", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
-        getInstructions(pointer) {
-          fillInstructionBuffer(pointer, 12);
-        },
+        instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
 
       vm.invokeAsMethod(vm.asLiteral(undefined), closure);
 
-      expect(() => inst.do(vm, offset)).toThrow();
+      expect(() => inst.do(vm)).toThrow();
     });
   },
 };
 
-function testPeekInstruction<TArgs extends any[], I extends Instruction<TArgs>>(
-  instruction: I,
-  args: TArgs,
-) {
-  pointer.reset();
-  instruction.writeWith(pointer, ...args);
-  pointer.reset();
-  const result = reifyInstruction(pointer.peek());
-  expect(result).toBe(instruction);
-}
-
-function testReadInstructionArgs<
-  TArgs extends any[],
-  I extends Instruction<TArgs>,
->(instruction: I, args: TArgs) {
-  pointer.reset();
-  instruction.writeWith(pointer, ...args);
-  pointer.reset();
-  const readArgsTarget = [] as any[];
-  expect(instruction.readArgs(pointer, readArgsTarget)).toEqual(args);
-}
-
-function testInstruction<TArgs extends any[], I extends Instruction<TArgs>>(
-  instruction: I,
-  args: TArgs,
-) {
-  const testDescription = instruction.explain(...args);
-  describe(testDescription, () => {
-    test("Peek Instruction", () => {
-      testPeekInstruction(instruction, args);
+function testInstruction<I extends Instruction<any>>(instruction: I) {
+  const testDescription = instruction.explain();
+  if (instructionTests[instruction.constructor.name]) {
+    describe(testDescription, () => {
+      instructionTests[instruction.constructor.name](instruction);
     });
-    test("Read Instruction Args", () => {
-      testReadInstructionArgs(instruction, args);
-    });
-    if (additionalTests[instruction.type]) {
-      additionalTests[instruction.type](instruction as any, args as any);
-    }
-  });
+  } else {
+    // TODO throw an error
+  }
 }
 
 describe("Instructions", () => {
-  // testInstruction(instPopAndStoreReceiverVar, [3]);
-  // testInstruction(instPopAndStoreTempVar, [3]);
-  testInstruction(instPushSpecialVal, [SpecialPushValue.NegativeOne]);
-  testInstruction(instReturnSpecialVal, [SpecialReturnValue.Self]);
-  // testInstruction(instReturnStackTopFrom, [StackTarget.ReceiverVar, 3]);
-  testInstruction(instPush, [ContextValue.ReceiverVar, 2]);
-  testInstruction(instPush, [ContextValue.TempVar, 3]);
-  testInstruction(instPush, [ContextValue.LiteralConst, 3]);
-  testInstruction(instPush, [ContextValue.LiteralVar, 3]);
-  testInstruction(instStore, [ContextVariable.ReceiverVar, 2]);
-  testInstruction(instStore, [ContextVariable.LiteralVar, 3]);
-  testInstruction(instStore, [ContextVariable.TempVar, 3]);
-  testInstruction(instPopAndStore, [ContextVariable.LiteralVar, 3]);
+  testInstruction(instruction.pushSpecialValue(SpecialPushValue.NegativeOne));
+  testInstruction(instruction.returnSpecialValue(SpecialReturnValue.Self));
+  testInstruction(instruction.push(ContextValue.ReceiverVar, 2));
+  testInstruction(instruction.push(ContextValue.TempVar, 3));
+  testInstruction(instruction.push(ContextValue.LiteralConst, 3));
+  testInstruction(instruction.push(ContextValue.LiteralVar, 3));
+  testInstruction(instruction.store(ContextVariable.ReceiverVar, 2));
+  testInstruction(instruction.store(ContextVariable.LiteralVar, 3));
+  testInstruction(instruction.store(ContextVariable.TempVar, 3));
+  testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
   // (TODO:testing) test a non-primitive method
-  testInstruction(instSendLiteralSelectorExt, [0, 1]);
-  testInstruction(instSendLiteralSelectorExt, [1, 1]);
-  // testInstruction(instSuperSendLiteralSelectorExt, [12, 4]);
-  testInstruction(instPop, []);
-  testInstruction(instDuplicate, []);
-  testInstruction(instJump, [5]);
-  testInstruction(instJump, [-5]);
-  testInstruction(instPopAndJumpOnTrue, [5]);
-  testInstruction(instPopAndJumpOnTrue, [-5]);
-  testInstruction(instPopAndJumpOnFalse, [5]);
-  testInstruction(instPopAndJumpOnFalse, [-5]);
+  testInstruction(instruction.sendLiteralSelectorExtended(0, 1));
+  testInstruction(instruction.sendLiteralSelectorExtended(1, 1));
+  testInstruction(instruction.pop());
+  testInstruction(instruction.duplicate());
+  testInstruction(instruction.jump(5));
+  testInstruction(instruction.jump(-5));
+  testInstruction(instruction.popAndJumpOnTrue(5));
+  testInstruction(instruction.popAndJumpOnTrue(-5));
+  testInstruction(instruction.popAndJumpOnFalse(5));
+  testInstruction(instruction.popAndJumpOnFalse(-5));
 });

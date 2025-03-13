@@ -2,7 +2,6 @@ import { type ClosureDescriptionJs } from "./closures";
 import { GlobalContext } from "./contexts";
 import { invariant, raise, StackUnderflowError } from "./errors";
 import { Dict, Stack } from "./generics";
-import { InstructionPointer } from "./instructions";
 import { primitiveMethodDict } from "./primitive_method";
 import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
 import { classDescriptions } from "./std_class_library";
@@ -10,26 +9,23 @@ import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
 } from "./runtime_type_checks";
-
-const MAX_INSTRUCTION_BYTES = 2 ** 20; // 1MB
+import type { Instruction } from "./instructions";
 
 export class VirtualMachine {
   globalContext = new GlobalContext();
 
   contextStack = Stack<VirtualObject>();
 
-  instructionBuffer = new ArrayBuffer(MAX_INSTRUCTION_BYTES);
-  instructionPointer = new InstructionPointer(
-    this.instructionBuffer,
-    0,
-    MAX_INSTRUCTION_BYTES,
-  );
-
   vNil = VirtualObject.createNil(this);
   vTrue = VirtualObject.createTrue(this);
   vFalse = VirtualObject.createFalse(this);
   internedStrings = Dict<VirtualObject>();
   internedNumbers = [] as VirtualObject[];
+
+  /** The stack-interpreter instructions that have been loaded into the VM */
+  instructions: Instruction<any>[] = [];
+  /** Index of the next instruction to execute */
+  instructionPointer = 0;
 
   constructor() {
     this.initializeGlobalContext();
@@ -182,19 +178,24 @@ export class VirtualMachine {
   }
 
   createClosure(description: ClosureDescriptionJs = {}): VirtualObject {
-    const byteOffset = this.instructionPointer.byteOffset;
+    // Since closures are virtual objects but instructions are not, we can't
+    // store the instructions in the closure object. Instead, we store them
+    // in the VM and reference them by index.
 
-    if (description.getInstructions) {
-      description.getInstructions(this.instructionPointer);
+    // New closures are added to the end of the instructions array
+    const startIndex = this.instructions.length;
+
+    if (description.instructions !== undefined) {
+      this.instructions.push(...description.instructions);
     }
 
     const literals = description.literals ?? [];
 
     const instructionByteRange = this.createObject("Range");
-    instructionByteRange.setVarWithName("start", this.asLiteral(byteOffset));
+    instructionByteRange.setVarWithName("start", this.asLiteral(startIndex));
     instructionByteRange.setVarWithName(
       "end",
-      this.asLiteral(this.instructionPointer.byteOffset),
+      this.asLiteral(this.instructions.length),
     );
 
     const closure = this.createObject("Closure");
@@ -321,7 +322,7 @@ export class VirtualMachine {
   /** (TODO:reflect) implement in interpreted language? */
   invokeAsMethod(receiver: VirtualObject, closure: VirtualObject) {
     const context = this.createMethodContext(receiver, closure);
-    const instructionByteIndex = context.readVarWithName(
+    const instructionIndex = context.readVarWithName(
       "instructionByteIndex",
       runtimeTypePositiveNumber,
     ).primitiveValue;
@@ -329,7 +330,7 @@ export class VirtualMachine {
     this.populateArgs(context, closure);
     this.contextStack.push(context);
     // jump to the first instruction
-    this.instructionPointer.byteOffset = instructionByteIndex;
+    this.instructionPointer = instructionIndex;
 
     return context;
   }

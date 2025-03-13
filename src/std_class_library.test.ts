@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import { VirtualMachine } from "./virtual_machine";
 import { runtimeTypeNotNil } from "./runtime_type_checks";
 import { Interpreter } from "./interpreter";
-import { instPush } from "./instructions";
 import { ContextValue } from "./contexts";
+import { instruction } from "./instructions";
 
 describe("Standard Class Library", () => {
   describe("Array", () => {
@@ -36,9 +36,7 @@ describe("Standard Class Library", () => {
 
       const blockClosure = vm.createClosure({
         literals: [42],
-        getInstructions(pointer) {
-          instPush.writeWith(pointer, ContextValue.LiteralConst, 0);
-        },
+        instructions: [instruction.push(ContextValue.LiteralConst, 0)],
       });
       evalStack.stackPush(blockClosure);
       evalStack.stackPush(vm.asLiteral(true));
@@ -46,7 +44,7 @@ describe("Standard Class Library", () => {
       vm.send("ifTrue:");
       interpreter.run();
 
-      expect(vm.evalStack.stackTop.primitiveValue).toBe(42);
+      expect(vm.evalStack.stackTop!.primitiveValue).toBe(42);
     });
   });
 });

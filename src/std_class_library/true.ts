@@ -1,10 +1,5 @@
 import { ContextValue } from "src/contexts";
-import {
-  instPush,
-  instPushSpecialVal,
-  instSendLiteralSelectorExt,
-  type InstructionPointer,
-} from "src/instructions";
+import { instruction } from "src/instructions";
 import { SpecialPushValue } from "src/special_value";
 import { type ClassDescription } from "src/virtual_objects";
 
@@ -12,15 +7,18 @@ export const dTrue_ifTrue = {
   argCount: 1,
   tempCount: 0,
   literals: ["value"],
-  getInstructions: (pointer: InstructionPointer) => {
-    // send #value to the first argument
-    // the block takes zero arguments
-    instPushSpecialVal.writeWith(pointer, SpecialPushValue.Zero);
-    // push the block onto the evaluation stack
-    instPush.writeWith(pointer, ContextValue.TempVar, 0);
+  instructions: [
+    // The following instructions send the #value message to the first argument of this method,
+    // which is expected to be a block closure.
+
+    // Provide the first argument to the #value message, the number of arguments the block is expected to take
+    instruction.pushSpecialValue(SpecialPushValue.Zero),
+
+    // push the block (first arg) onto the evaluation stack
+    instruction.push(ContextValue.TempVar, 0),
     // actually send the message
-    instSendLiteralSelectorExt.writeWith(pointer, 0, 1);
-  },
+    instruction.sendLiteralSelectorExtended(0, 1),
+  ],
 };
 
 const dTrue: ClassDescription = {

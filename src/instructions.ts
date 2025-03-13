@@ -1,17 +1,12 @@
 import {
-  invariant,
-  raise,
-  RangeError,
-  StackUnderflowError,
-  UnknownVMInstruction,
-} from "./errors";
-import { Dict } from "./generics";
-import {
   ContextValue,
   ContextVariable,
   loadContextValue,
   storeContextValue,
 } from "./contexts";
+import { invariant, StackUnderflowError } from "./errors";
+import { jumpRelative } from "./jump";
+import { runtimeTypeNotNil, runtimeTypeString } from "./runtime_type_checks";
 import {
   reifySpecialPushValue,
   reifySpecialReturnValue,
@@ -19,191 +14,46 @@ import {
   SpecialReturnValue,
 } from "./special_value";
 import type { VirtualMachine } from "./virtual_machine";
-import {
-  runtimeTypeNotNil,
-  runtimeTypePositiveNumber,
-  runtimeTypeString,
-} from "./runtime_type_checks";
-import type { VirtualObject } from "./virtual_objects";
-import { jumpRelative } from "./jump";
 
-const enum InstructionType {
-  POP_AND_STORE_RECEIVER_VAR = 96,
-  POP_AND_STORE_TEMP_VAR = 104,
-  PUSH_SPECIAL_VAL = 112,
-  RETURN_SPECIAL_VAL = 120,
-  RETURN_STACK_TOP_FROM = 124,
-  PUSH = 128,
-  STORE = 129,
-  POP_AND_STORE = 130,
-  SEND_SPECIAL_SELECTOR = 131,
-  SEND_LITERAL_SELECTOR_EXT = 132,
-  SUPER_SEND_SPECIAL_SELECTOR = 133,
-  SUPER_SEND_LITERAL_SELECTOR_EXT = 134,
-  POP = 135,
-  DUPLICATE = 136,
-  JUMP = 160,
-  POP_AND_JUMP_ON_TRUE = 168,
-  POP_AND_JUMP_ON_FALSE = 172,
+export abstract class Instruction<Params extends number[]> {
+  constructor(readonly args: Params) {}
+  abstract explain(): string;
+  abstract do(vm: VirtualMachine): void;
 }
-
-export enum EvaluationStackType {
-  Message,
-  Block,
-}
-
-export interface Instruction<TArgs extends any[]> {
-  readonly type: InstructionType;
-  writeWith(writer: InstructionPointer, ...args: TArgs): void;
-  explain(...args: TArgs): string;
-  readArgs(reader: InstructionPointer, target: number[]): TArgs;
-  do(machine: VirtualMachine, ...args: TArgs): void;
-}
-
-/**
- * Pop the object from the top of the stack and store in the receiver variable at the given 0-based offset
- * @param offset The offset from the start of the receiver variables
- *
- */
-// export const instPopAndStoreReceiverVar: Instruction<[Uint3]> = {
-//   type: InstructionType.POP_AND_STORE_RECEIVER_VAR,
-
-//   writeWith(writer: InstructionWriter, offset: Uint3) {
-//     writer.write(this.type + offset);
-//   },
-
-//   explain(offset: Uint3) {
-//     return `Pop and store receiver var at offset ${offset}`;
-//   },
-
-//   readArgs(reader: InstructionReader, target: number[]): [Uint3] {
-//     target[0] = reader.read() - this.type;
-//     return target as [Uint3];
-//   },
-
-//   do(machine: VirtualMachine, offset: Uint3) {
-//     const context = machine.contextStack.peek()
-//     invariant(context, StackUnderflowError, "context")
-//     const {evalStack, receiver} = context
-//     const object = evalStack.pop()
-//     invariant(object, StackUnderflowError, "evaluation")
-//     receiver.setVar(offset, object)
-//   },
-// };
-
-/**
- * Pop the object from the top of the stack and store in the temporary variable at the given 0-based offset
- * @param offset The offset from the start of the temporary variables
- *
- */
-// export const instPopAndStoreTempVar: Instruction<[Uint3]> = {
-//   type: InstructionType.POP_AND_STORE_TEMP_VAR,
-
-//   writeWith(writer: InstructionWriter, offset: number) {
-//     writer.write(this.type + offset);
-//   },
-
-//   explain(offset: number) {
-//     return `Pop and store temp var at offset ${offset}`;
-//   },
-
-//   readArgs(reader: InstructionReader, target: number[]): [Uint3] {
-//     target[0] = reader.read() - this.type;
-//     return target as [Uint3];
-//   },
-
-//   do(machine: VirtualMachine, offset: Uint3) {
-//     const context = machine.contextStack.peek()
-//     invariant(context, StackUnderflowError, "context")
-//     const object = context.evalStack.pop()
-//     invariant(object, StackUnderflowError, "evaluation")
-//     context.argsAndTemps.put(offset, object)
-//   },
-// };
 
 /**
  * Push a special value onto the eval Stack
  * @param value The special value to Push
  * @see SpecialPushValue
  */
-export const instPushSpecialVal: Instruction<[SpecialPushValue]> = {
-  type: InstructionType.PUSH_SPECIAL_VAL,
-
-  writeWith(writer, value) {
-    writer.write(this.type + value);
-  },
-
-  explain(value) {
-    return `Push special value ${SpecialPushValue[value]}`;
-  },
-
-  readArgs(reader, target): [SpecialPushValue] {
-    target[0] = reader.read() - this.type;
-    return target as [SpecialPushValue];
-  },
-
-  do(machine, value) {
-    const object = reifySpecialPushValue(value, machine);
-    const context = machine.contextStack.peek();
+class PushSpecialValueInstruction extends Instruction<[SpecialPushValue]> {
+  explain() {
+    return `Push special value ${SpecialPushValue[this.args[0]]}`;
+  }
+  do(vm: VirtualMachine) {
+    const object = reifySpecialPushValue(this.args[0], vm);
+    const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
     evalStack.stackPush(object);
-  },
-};
+  }
+}
 
 /**
  * Return a special Value
  * @param value The special value to return
  * @see SpecialReturnValue
  */
-export const instReturnSpecialVal: Instruction<[SpecialReturnValue]> = {
-  type: InstructionType.RETURN_SPECIAL_VAL,
-
-  writeWith(writer, value) {
-    writer.write(this.type + value);
-  },
-
-  explain(value) {
-    return `Return special value ${SpecialReturnValue[value]}`;
-  },
-
-  readArgs(reader, target): [SpecialReturnValue] {
-    target[0] = reader.read() - this.type;
-    return target as [SpecialReturnValue];
-  },
-
-  do(machine, value) {
-    const object = reifySpecialReturnValue(value, machine);
-    machine.contextStack.pop();
-    const context = machine.contextStack.peek();
-    invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    evalStack.stackPush(object);
-  },
-};
-
-/**
- * Return the object on the top of the return Stack
- * @param value Whether to return from a message or Block
- * @see EvaluationStackType
- */
-// (TODO:language) Do we want explicit return statements?
-// export const instReturnStackTopFrom: Instruction<[EvaluationStackType]> = {
-//   type: InstructionType.RETURN_STACK_TOP_FROM,
-
-//   writeWith(writer: InstructionWriter, value: EvaluationStackType) {
-//     writer.write(this.type + value);
-//   },
-
-//   explain(value: EvaluationStackType) {
-//     return `Return stack top from ${EvaluationStackType[value]}`;
-//   },
-
-//   readArgs(reader: InstructionReader, target: number[]): [EvaluationStackType] {
-//     target[0] = reader.read() - this.type;
-//     return target as [EvaluationStackType];
-//   },
-// };
+class ReturnSpecialValueInstruction extends Instruction<[SpecialReturnValue]> {
+  explain() {
+    return `Return special value ${SpecialPushValue[this.args[0]]}`;
+  }
+  do(vm: VirtualMachine) {
+    const object = reifySpecialReturnValue(this.args[0], vm);
+    vm.contextStack.pop();
+    vm.evalStack.stackPush(object);
+  }
+}
 
 /**
  * Push an object onto the eval stack
@@ -211,35 +61,17 @@ export const instReturnSpecialVal: Instruction<[SpecialReturnValue]> = {
  * @param offset The offset from the source
  * @see ContextValue
  */
-export const instPush: Instruction<[ContextValue, number]> & {
-  readonly bitShift: number;
-} = {
-  type: InstructionType.PUSH,
-
-  bitShift: 6,
-
-  writeWith(writer, source, offset) {
-    writer.write(this.type);
-    writer.write(packBits(source, offset, this.bitShift));
-  },
-
-  explain(source: ContextValue, offset: number) {
+class PushInstruction extends Instruction<[ContextValue, number]> {
+  explain() {
+    const [source, offset] = this.args;
     return `Push from ${ContextValue[source]} at offset ${offset}`;
-  },
-
-  readArgs(reader, target): [ContextValue, number] {
-    reader.read();
-    return unpackBits(reader.read(), this.bitShift, target as [number, number]);
-  },
-
-  do(machine, source, offset) {
-    const object = loadContextValue(source, offset, machine);
-    const context = machine.contextStack.peek();
-    invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    evalStack.stackPush(object);
-  },
-};
+  }
+  do(vm: VirtualMachine) {
+    const [source, offset] = this.args;
+    const object = loadContextValue(source, offset, vm);
+    vm.evalStack.stackPush(object);
+  }
+}
 
 /**
  * Store the object on the top of the stack in the indicated location
@@ -247,40 +79,18 @@ export const instPush: Instruction<[ContextValue, number]> & {
  * @param offset The offset from the target
  * @see ContextVariable
  */
-export const instStore: Instruction<[ContextVariable, number]> & {
-  readonly bitShift: number;
-} = {
-  type: InstructionType.STORE,
-
-  bitShift: 6,
-
-  writeWith(writer, target, offset) {
-    writer.write(this.type);
-    writer.write(packBits(target, offset, this.bitShift!));
-  },
-
-  explain(target: ContextVariable, offset: number) {
-    return `Store to ${ContextVariable[target]} at offset ${offset}`;
-  },
-
-  readArgs(reader, target): [ContextVariable, number] {
-    reader.read();
-    return unpackBits(
-      reader.read(),
-      this.bitShift!,
-      target as [number, number],
-    );
-  },
-
-  do(machine, target, offset) {
-    const context = machine.contextStack.peek();
-    invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const object = evalStack.stackTop;
+class StoreInstruction extends Instruction<[ContextVariable, number]> {
+  explain() {
+    const [source, offset] = this.args;
+    return `Store to ${ContextValue[source]} at offset ${offset}`;
+  }
+  do(vm: VirtualMachine) {
+    const [source, offset] = this.args;
+    const object = vm.evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
-    storeContextValue(target, offset, machine, object);
-  },
-};
+    storeContextValue(source, offset, vm, object);
+  }
+}
 
 /**
  * Pop the object from the top of the stack and store in the indicated location
@@ -288,88 +98,18 @@ export const instStore: Instruction<[ContextVariable, number]> & {
  * @param offset The offset from the target
  * @see ContextVariable
  */
-export const instPopAndStore: Instruction<[ContextVariable, number]> & {
-  readonly bitShift: number;
-} = {
-  type: InstructionType.POP_AND_STORE,
-
-  bitShift: 6,
-
-  writeWith(writer, target, offset: number) {
-    writer.write(this.type);
-    writer.write(packBits(target, offset, this.bitShift!));
-  },
-
-  explain(target: ContextVariable, offset: number) {
-    return `Pop and store to ${ContextVariable[target]} at offset ${offset}`;
-  },
-
-  readArgs(reader, target): [ContextVariable, number] {
-    reader.read();
-    return unpackBits(
-      reader.read(),
-      this.bitShift!,
-      target as [number, number],
-    );
-  },
-
-  do(machine, target, offset) {
-    const context = machine.contextStack.peek();
-    invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const object = evalStack.stackPop();
+class PopAndStoreInstruction extends Instruction<[ContextVariable, number]> {
+  explain() {
+    const [source, offset] = this.args;
+    return `Pop and store to ${ContextValue[source]} at offset ${offset}`;
+  }
+  do(vm: VirtualMachine) {
+    const [source, offset] = this.args;
+    const object = vm.evalStack.stackPop();
     invariant(object, StackUnderflowError, "evaluation");
-    storeContextValue(target, offset, machine, object);
-  },
-};
-
-/**
- * Send a message using a special selector with the given number of arguments.
- * The receiver is taken off the stack, followed by the arguments.
- * @param selector The special selector to Send
- * @param numArgs The number of arguments to the Message
- * @see SpecialSelectorType
- * (TODO:performance) implement special selector send instructions
- */
-// export const instSendSpecialSelector: Instruction<[SpecialSelectorType, number]> & {
-//   readonly bitShift: number;
-// } = {
-//   type: InstructionType.SEND_SPECIAL_SELECTOR,
-
-//   bitShift: 3,
-
-//   writeWith(
-//     writer: InstructionWriter,
-//     selector: SpecialSelectorType,
-//     numArgs: number,
-//   ) {
-//     writer.write(this.type);
-//     writer.write(packBits(selector, numArgs, this.bitShift));
-//   },
-
-//   explain(selector: SpecialSelectorType, numArgs: number) {
-//     return `Send special selector ${SpecialSelectorType[selector]} with ${numArgs} args`;
-//   },
-
-//   readArgs(
-//     reader: InstructionReader,
-//     target: number[],
-//   ): [SpecialSelectorType, number] {
-//     reader.read();
-//     return unpackBits(reader.read(), this.bitShift, target as [number, number]);
-//   },
-
-//   do(machine: VirtualMachine, selector: SpecialSelectorType, numArgs: number) {
-//     const context = machine.contextStack.peek()
-//     invariant(context, StackUnderflowError, "context")
-//     const {evalStack} = context
-//     const args = evalStack.popN(numArgs)
-//     const receiver = evalStack.pop()
-//     invariant(receiver, StackUnderflowError, "evaluation")
-//     const result = receiver.perform(machine, selector, args)
-//     evalStack.push(result)
-//   }
-// };
+    storeContextValue(source, offset, vm, object);
+  }
+}
 
 /**
  * Send a message using a literal selector with the given number of arguments.
@@ -377,31 +117,18 @@ export const instPopAndStore: Instruction<[ContextVariable, number]> & {
  * @param selector The index of the literal selector found in the method's literal array
  * @param numArgs The number of arguments to the message
  */
-export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
-  readonly bitShift: number;
-} = {
-  type: InstructionType.SEND_LITERAL_SELECTOR_EXT,
-
-  bitShift: 7,
-
-  writeWith(writer, selector, numArgs) {
-    writer.write(this.type);
-    writer.write(packBits(selector, numArgs, this.bitShift));
-  },
-
-  explain(selector: number, numArgs: number) {
-    return `Send literal selector ${selector} with ${numArgs} args`;
-  },
-
-  readArgs(reader, target): [number, number] {
-    reader.read();
-    return unpackBits(reader.read(), this.bitShift, target as [number, number]);
-  },
-
-  do(machine, selectorIndex, numArgs) {
-    const context = machine.contextStack.peek();
+class SendLiteralSelectorExtendedInstruction extends Instruction<
+  [number, number]
+> {
+  explain() {
+    const [selectorIndex, argumentCount] = this.args;
+    return `Send literal selector ${selectorIndex} with ${argumentCount} arguments`;
+  }
+  do(vm: VirtualMachine) {
+    const [selectorIndex, numArgs] = this.args;
+    const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const initialStackDepth = machine.evalStack.stackDepth;
+    const initialStackDepth = vm.evalStack.stackDepth;
     invariant(
       initialStackDepth >= numArgs + 1,
       StackUnderflowError,
@@ -409,369 +136,151 @@ export const instSendLiteralSelectorExt: Instruction<[number, number]> & {
     );
 
     const closure = context.readVarWithName("closure", runtimeTypeNotNil);
+    // (TODO:optimize) add a global selector table to the VM
     const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
     const { primitiveValue } = literals.readIndex(
       selectorIndex,
       runtimeTypeString,
     );
-    machine.send(primitiveValue);
-  },
-};
-
-/**
- * Send a message to the superclass using a special selector with the given number of arguments.
- * @param selector The special selector to Send
- * @param numArgs The number of arguments to the Message
- * @see SpecialSelectorType
- *
- */
-// export const instSuperSendSpecialSelector: Instruction<
-//   [SpecialSelectorType, number]
-// > & { readonly bitShift: number } = {
-//   type: InstructionType.SUPER_SEND_SPECIAL_SELECTOR,
-
-//   bitShift: 3,
-
-//   writeWith(
-//     writer: InstructionWriter,
-//     selector: SpecialSelectorType,
-//     numArgs: number,
-//   ) {
-//     writer.write(this.type);
-//     writer.write(packBits(selector, numArgs, this.bitShift));
-//   },
-
-//   explain(selector: SpecialSelectorType, numArgs: number) {
-//     return `Super send special selector ${SpecialSelectorType[selector]} with ${numArgs} args`;
-//   },
-
-//   readArgs(
-//     reader: InstructionReader,
-//     target: number[],
-//   ): [SpecialSelectorType, number] {
-//     reader.read();
-//     return unpackBits(reader.read(), this.bitShift, target as [number, number]);
-//   },
-// };
-
-/**
- * Send a message to the superclass using a literal selector with the given number of arguments.
- * @param selector The index of the literal selector found in the method's literal array
- * @param numArgs The number of arguments to the message
- *
- * TODO: implement super send instructions
- */
-// export const instSuperSendLiteralSelectorExt: Instruction<[number, number]> & {
-//   readonly bitShift: 7;
-// } = {
-//   type: InstructionType.SUPER_SEND_LITERAL_SELECTOR_EXT,
-
-//   bitShift: 7,
-
-//   writeWith(writer: InstructionWriter, selector: number, numArgs: number) {
-//     writer.write(this.type);
-//     writer.write(packBits(selector, numArgs, this.bitShift));
-//   },
-
-//   explain(selector: number, numArgs: number) {
-//     return `Super send literal selector ${selector} with ${numArgs} args`;
-//   },
-
-//   readArgs(reader: InstructionReader, target: number[]): [number, number] {
-//     reader.read();
-//     return unpackBits(reader.read(), this.bitShift, target as [number, number]);
-//   },
-// };
+    vm.send(primitiveValue);
+  }
+}
 
 /**
  * Pop the object from the top of the Stack
  */
-export const instPop: Instruction<[]> = {
-  type: InstructionType.POP,
-
-  writeWith(writer) {
-    writer.write(this.type);
-  },
-
+class PopInstruction extends Instruction<[]> {
   explain() {
-    return `Pop`;
-  },
-
-  readArgs(reader, target): [] {
-    reader.read();
-    return target as [];
-  },
-
-  do(machine) {
-    const context = machine.contextStack.peek();
-    invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    invariant(evalStack.stackDepth > 0, StackUnderflowError, "evaluation");
-    evalStack.stackPop();
-  },
-};
+    return "Pop";
+  }
+  do(vm: VirtualMachine) {
+    invariant(vm.evalStack.stackDepth > 0, StackUnderflowError, "evaluation");
+    vm.evalStack.stackPop();
+  }
+}
 
 /**
  * Duplicate the object on the top of the Stack
  */
-export const instDuplicate: Instruction<[]> = {
-  type: InstructionType.DUPLICATE,
-
-  writeWith(writer) {
-    writer.write(this.type);
-  },
-
+class DuplicateInstruction extends Instruction<[]> {
   explain() {
-    return `Duplicate`;
-  },
-
-  readArgs(reader, target: number[]): [] {
-    reader.read();
-    return target as [];
-  },
-
-  do(machine) {
-    const context = machine.contextStack.peek();
-    invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const object = evalStack.stackTop;
+    return "Duplicate";
+  }
+  do(vm: VirtualMachine) {
+    const object = vm.evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
-    evalStack.stackPush(object);
-  },
-};
+    vm.evalStack.stackPush(object);
+  }
+}
 
 /**
  * Jump the given number of bytes, unconditionally.
  */
-export const instJump: Instruction<[number]> = {
-  type: InstructionType.JUMP,
-
-  writeWith(writer, offset) {
-    writer.write(this.type);
-    writer.write(offset);
-  },
-
-  explain(offset: number) {
-    return `Jump ${offset}`;
-  },
-
-  readArgs(reader, target): [number] {
-    reader.read();
-    target[0] = reader.read();
-    return target as [number];
-  },
-
-  do(machine, offset) {
-    const context = machine.contextStack.peek();
+class JumpInstruction extends Instruction<[number]> {
+  explain() {
+    return `Jump to ${this.args[0]}`;
+  }
+  do(vm: VirtualMachine) {
+    const context = vm.contextStack.peek();
+    const [offset] = this.args;
     invariant(context, StackUnderflowError, "context");
-    jumpRelative(context, offset, machine);
-  },
-};
+    jumpRelative(context, offset, vm);
+  }
+}
 
 /**
  * If the object on the top of the Stack is True, pop it and jump the given number of bytes.
  * Otherwise, continue to the next instruction.
- * @param offset The number of bytes to jump, can be negative.
+ * @param offset The number of instructions to jump, can be negative.
  */
-export const instPopAndJumpOnTrue: Instruction<[number]> = {
-  type: InstructionType.POP_AND_JUMP_ON_TRUE,
-
-  writeWith(writer, offset: number) {
-    writer.write(this.type);
-    writer.write(offset);
-  },
-
-  explain(offset: number) {
-    return `Pop and jump ${offset} on True`;
-  },
-
-  readArgs(reader, target): [number] {
-    reader.read();
-    target[0] = reader.read();
-    return target as [number];
-  },
-
-  do(machine, offset) {
-    const context = machine.contextStack.peek();
+class PopAndJumpOnTrueInstruction extends Instruction<[number]> {
+  explain() {
+    return `Pop and jump on true to ${this.args[0]}`;
+  }
+  do(vm: VirtualMachine) {
+    const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const object = evalStack.stackTop;
-    invariant(object, StackUnderflowError, "evaluation");
-    if (object.isTrue) {
-      jumpRelative(context, offset, machine);
+    const [offset] = this.args;
+    const condition = vm.evalStack.stackTop;
+    invariant(condition, StackUnderflowError, "evaluation");
+    if (condition.isTrue) {
+      vm.evalStack.stackPop();
+      jumpRelative(context, offset, vm);
     }
-  },
-};
+  }
+}
 
 /**
  * If the object on the top of the Stack is False, pop it and jump the given number of bytes.
  * Otherwise, continue to the next instruction.
  * @param offset The number of bytes to jump, can be negative.
  */
-export const instPopAndJumpOnFalse: Instruction<[number]> = {
-  type: InstructionType.POP_AND_JUMP_ON_FALSE,
-
-  writeWith(writer, offset) {
-    writer.write(this.type);
-    writer.write(offset);
-  },
-
-  explain(offset) {
-    return `Pop and jump ${offset} on False`;
-  },
-
-  readArgs(reader, target): [number] {
-    reader.read();
-    target[0] = reader.read();
-    return target as [number];
-  },
-
-  do(machine, offset) {
-    const context = machine.contextStack.peek();
+class PopAndJumpOnFalseInstruction extends Instruction<[number]> {
+  explain() {
+    return `Pop and jump on false to ${this.args[0]}`;
+  }
+  do(vm: VirtualMachine) {
+    const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-    const object = evalStack.stackTop;
-    invariant(object, StackUnderflowError, "evaluation");
-    if (object.isFalse) {
-      jumpRelative(context, offset, machine);
+    const [offset] = this.args;
+    const condition = vm.evalStack.stackTop;
+    invariant(condition, StackUnderflowError, "evaluation");
+    if (condition.isFalse) {
+      vm.evalStack.stackPop();
+      jumpRelative(context, offset, vm);
     }
+  }
+}
+
+export const instruction = {
+  pushSpecialValue(value: SpecialPushValue): Instruction<[SpecialPushValue]> {
+    return new PushSpecialValueInstruction([value]);
+  },
+  returnSpecialValue(
+    value: SpecialReturnValue,
+  ): Instruction<[SpecialReturnValue]> {
+    return new ReturnSpecialValueInstruction([value]);
+  },
+  push(
+    source: ContextValue,
+    offset: number,
+  ): Instruction<[ContextValue, number]> {
+    return new PushInstruction([source, offset]);
+  },
+  store(
+    source: ContextVariable,
+    offset: number,
+  ): Instruction<[ContextVariable, number]> {
+    return new StoreInstruction([source, offset]);
+  },
+  popAndStore(
+    source: ContextVariable,
+    offset: number,
+  ): Instruction<[ContextVariable, number]> {
+    return new PopAndStoreInstruction([source, offset]);
+  },
+  sendLiteralSelectorExtended(
+    selectorIndex: number,
+    argumentCount: number,
+  ): Instruction<[number, number]> {
+    return new SendLiteralSelectorExtendedInstruction([
+      selectorIndex,
+      argumentCount,
+    ]);
+  },
+  pop(): Instruction<[]> {
+    return new PopInstruction([]);
+  },
+  duplicate(): Instruction<[]> {
+    return new DuplicateInstruction([]);
+  },
+  jump(byteOffset: number): Instruction<[number]> {
+    return new JumpInstruction([byteOffset]);
+  },
+  popAndJumpOnTrue(byteOffset: number): Instruction<[number]> {
+    return new PopAndJumpOnTrueInstruction([byteOffset]);
+  },
+  popAndJumpOnFalse(byteOffset: number): Instruction<[number]> {
+    return new PopAndJumpOnFalseInstruction([byteOffset]);
   },
 };
-
-const instructionTypes: Instruction<any>[] = [
-  // instPopAndStoreReceiverVar,
-  // instPopAndStoreTempVar,
-  instPushSpecialVal,
-  instReturnSpecialVal,
-  // instReturnStackTopFrom,
-  instPush,
-  instStore,
-  instPopAndStore,
-  // instSendSpecialSelector,
-  instSendLiteralSelectorExt,
-  // instSuperSendSpecialSelector,
-  // instSuperSendLiteralSelectorExt,
-  instPop,
-  instDuplicate,
-  instJump,
-  instPopAndJumpOnTrue,
-  instPopAndJumpOnFalse,
-];
-
-// sort in descending order of type
-instructionTypes.sort((a, b) => b.type - a.type);
-
-const instructionCodeCache = Dict<Instruction<any>>();
-
-function packBits(num1: number, num2: number, num2Bits: number): number {
-  invariant(
-    num2 < 1 << num2Bits,
-    RangeError,
-    0,
-    1 << (num2Bits - 1),
-    num2,
-    `a ${num2Bits}-bit number`,
-  );
-  return (num1 << num2Bits) | num2;
-}
-
-function unpackBits(
-  packed: number,
-  num2Bits: number,
-  target: [number, number] = [0, 0],
-): [number, number] {
-  target[0] = packed >> num2Bits;
-  target[1] = packed & ((1 << num2Bits) - 1);
-  return target;
-}
-
-export function reifyInstruction(code: number): Instruction<any> {
-  const cached = instructionCodeCache[code];
-
-  if (cached) {
-    return cached;
-  }
-
-  for (const inst of instructionTypes) {
-    if (inst.type <= code) {
-      instructionCodeCache[code] = inst;
-      return inst;
-    }
-  }
-  raise(UnknownVMInstruction, code);
-}
-
-const SIGNED_TWO_BYTE_MIN = -1 << 15;
-const SIGNED_TWO_BYTE_MAX = (1 << 15) - 1;
-
-export function peekInstructionCodeFromDataView(
-  view: DataView,
-  byteOffset: number,
-) {
-  return view.getInt16(byteOffset, true);
-}
-
-export function getNextInstructionCodeByteOffset(byteOffset: number) {
-  return byteOffset + 2;
-}
-
-/**
- * My instances read/write VM instructions to an Int16Array.
- * (TODO:optmem) (TODO:optspeed) Each type of instruction uses only the number of bytes it needs
- */
-export class InstructionPointer {
-  byteOffset = 0;
-
-  get finished() {
-    return this.byteOffset >= this.byteOffsetLimit;
-  }
-
-  private view: DataView;
-
-  constructor(
-    buffer: ArrayBuffer,
-    byteOffsetInBuffer = 0,
-    readonly byteOffsetLimit = buffer.byteLength,
-  ) {
-    this.view = new DataView(buffer, byteOffsetInBuffer, byteOffsetLimit);
-  }
-
-  peek(): number {
-    return peekInstructionCodeFromDataView(this.view, this.byteOffset);
-  }
-
-  read(): number {
-    const code = this.peek();
-    this.byteOffset = getNextInstructionCodeByteOffset(this.byteOffset);
-    return code;
-  }
-
-  write(twoBytes: number) {
-    invariant(
-      twoBytes >= SIGNED_TWO_BYTE_MIN && twoBytes <= SIGNED_TWO_BYTE_MAX,
-      RangeError,
-      twoBytes,
-      SIGNED_TWO_BYTE_MIN,
-      SIGNED_TWO_BYTE_MAX,
-      "a signed two byte value",
-    );
-    this.view.setInt16(this.byteOffset, twoBytes, true);
-    this.byteOffset = getNextInstructionCodeByteOffset(this.byteOffset);
-  }
-
-  reset() {
-    this.byteOffset = 0;
-  }
-
-  jumpRelative(byteCount: number) {
-    this.byteOffset += byteCount;
-    invariant(
-      this.byteOffset >= 0 && this.byteOffset <= this.byteOffsetLimit,
-      RangeError,
-      0,
-      this.byteOffsetLimit,
-      this.byteOffset,
-      "a valid byte offset",
-    );
-  }
-}
