@@ -13,15 +13,8 @@ import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
 } from "./runtime_type_checks";
-import type { AnyLiteralJsValue } from "./virtual_objects";
 import { jumpRelative } from "./jump";
-
-function invokeEmptyMethodOnLiteral(
-  vm: VirtualMachine,
-  receiver: AnyLiteralJsValue,
-) {
-  return vm.invokeAsMethod(vm.asLiteral(receiver), vm.createClosure());
-}
+import { invokeEmptyMethodOnLiteral } from "./test_helpers";
 
 const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
   PushSpecialValueInstruction: (inst) => {
