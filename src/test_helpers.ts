@@ -11,6 +11,22 @@ export function invokeEmptyMethodOnLiteral(
   return vm.invokeAsMethod(vm.asLiteral(receiver), vm.createClosure());
 }
 
+export function sendMessageToLiteral(literal: boolean, selector: string) {
+  const vm = new VirtualMachine();
+  const interpreter = new Interpreter(vm);
+
+  invokeEmptyMethodOnLiteral(vm, undefined);
+  const { evalStack } = vm;
+  const vObject = vm.asLiteral(literal);
+
+  evalStack.stackPush(vObject);
+
+  vm.send(selector);
+  interpreter.run();
+
+  return vm;
+}
+
 export function isBlockEvaluated(literal: boolean, selector: string) {
   const vm = new VirtualMachine();
   const interpreter = new Interpreter(vm);

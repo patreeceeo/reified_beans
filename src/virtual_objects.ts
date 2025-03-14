@@ -59,6 +59,7 @@ export class VirtualObject {
     const classKey = this.getLiteralClassKey(true);
     const vo = VirtualObject.createObject(vm, classKey);
     vo.isTrue = true;
+    vo._primitiveValue = true;
     return vo;
   }
 
@@ -66,6 +67,7 @@ export class VirtualObject {
     const classKey = this.getLiteralClassKey(false);
     const vo = VirtualObject.createObject(vm, classKey);
     vo.isFalse = true;
+    vo._primitiveValue = false;
     return vo;
   }
 

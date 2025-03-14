@@ -5,7 +5,6 @@ import { type ClassDescription } from "src/virtual_objects";
 
 export const dTrue_ifTrue = {
   argCount: 1,
-  tempCount: 0,
   literals: ["value"],
   instructions: [
     // The following instructions send the #value message to the first argument of this method,
@@ -28,6 +27,14 @@ export const dTrue_ifFalse = {
   instructions: [instruction.noop()],
 };
 
+export const dTrue_not = {
+  instructions: [
+    // I've been popped off the stack
+    // and now I push false in my place
+    instruction.pushSpecialValue(SpecialPushValue.False),
+  ],
+};
+
 const dTrue: ClassDescription = {
   name: "True",
   superClass: "Boolean",
@@ -36,6 +43,7 @@ const dTrue: ClassDescription = {
   methodDict: {
     "ifTrue:": dTrue_ifTrue,
     "ifFalse:": dTrue_ifFalse,
+    not: dTrue_not,
   },
 };
 

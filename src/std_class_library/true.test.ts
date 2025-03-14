@@ -1,4 +1,4 @@
-import { isBlockEvaluated } from "src/test_helpers";
+import { isBlockEvaluated, sendMessageToLiteral } from "src/test_helpers";
 import { describe, expect, test } from "vitest";
 
 describe("Standard Class Library", () => {
@@ -9,6 +9,11 @@ describe("Standard Class Library", () => {
 
     test("ifFalse:", () => {
       expect(isBlockEvaluated(true, "ifFalse:")).toBe(false);
+    });
+
+    test("not", () => {
+      const vm = sendMessageToLiteral(true, "not");
+      expect(vm.evalStack.stackTop!.primitiveValue).toBe(false);
     });
   });
 });
