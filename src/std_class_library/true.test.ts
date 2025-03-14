@@ -6,5 +6,9 @@ describe("Standard Class Library", () => {
     test("ifTrue:", () => {
       expect(isBlockEvaluated(true, "ifTrue:")).toBe(true);
     });
+
+    test("ifFalse:", () => {
+      expect(isBlockEvaluated(true, "ifFalse:")).toBe(false);
+    });
   });
 });

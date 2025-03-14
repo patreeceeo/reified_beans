@@ -21,6 +21,13 @@ export const dTrue_ifTrue = {
   ],
 };
 
+export const dTrue_ifFalse = {
+  argCount: 1,
+  tempCount: 0,
+  literals: [],
+  instructions: [instruction.noop()],
+};
+
 const dTrue: ClassDescription = {
   name: "True",
   superClass: "Boolean",
@@ -28,6 +35,7 @@ const dTrue: ClassDescription = {
   classComment: "My instances represent logical accuracy.",
   methodDict: {
     "ifTrue:": dTrue_ifTrue,
+    "ifFalse:": dTrue_ifFalse,
   },
 };
 
