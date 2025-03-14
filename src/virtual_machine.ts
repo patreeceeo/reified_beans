@@ -1,4 +1,4 @@
-import { type ClosureDescriptionJs } from "./closures";
+import { closureDefaults, type ClosureDescriptionJs } from "./closures";
 import { GlobalContext } from "./contexts";
 import { invariant, raise, StackUnderflowError } from "./errors";
 import { Dict, Stack } from "./generics";
@@ -10,6 +10,7 @@ import {
   runtimeTypePositiveNumber,
 } from "./runtime_type_checks";
 import type { Instruction } from "./instructions";
+import { getWithDefault } from "../utils";
 
 export class VirtualMachine {
   globalContext = new GlobalContext();
@@ -181,17 +182,21 @@ export class VirtualMachine {
     // Since closures are virtual objects but instructions are not, we can't
     // store the instructions in the closure object. Instead, we store them
     // in the VM and reference them by index.
+    const instructions = getWithDefault(
+      description,
+      closureDefaults,
+      "instructions",
+    );
+    const literals = getWithDefault(description, closureDefaults, "literals");
+    const argCount = getWithDefault(description, closureDefaults, "argCount");
+    const tempCount = getWithDefault(description, closureDefaults, "tempCount");
 
     // New closures are added to the end of the instructions array
     const startIndex = this.instructions.length;
-
-    if (description.instructions !== undefined) {
-      this.instructions.push(...description.instructions);
-    }
-
-    const literals = description.literals ?? [];
-
     const instructionByteRange = this.createObject("Range");
+
+    this.instructions.push(...instructions);
+
     instructionByteRange.setVarWithName("start", this.asLiteral(startIndex));
     instructionByteRange.setVarWithName(
       "end",
@@ -199,14 +204,8 @@ export class VirtualMachine {
     );
 
     const closure = this.createObject("Closure");
-    closure.setVarWithName(
-      "argCount",
-      this.asLiteral(description.argCount ?? 0),
-    );
-    closure.setVarWithName(
-      "tempCount",
-      this.asLiteral(description.tempCount ?? 0),
-    );
+    closure.setVarWithName("argCount", this.asLiteral(argCount));
+    closure.setVarWithName("tempCount", this.asLiteral(tempCount));
     closure.setVarWithName("literals", this.asLiteral(literals));
     closure.setVarWithName("instructionByteRange", instructionByteRange);
 

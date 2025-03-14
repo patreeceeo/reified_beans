@@ -39,7 +39,12 @@ export class Interpreter {
     invariant(context !== undefined, StackUnderflowError, "context");
     const instruction = vm.instructions[vm.instructionPointer];
 
-    console.log(vm.instructionPointer, ":", instruction.explain());
+    console.log(
+      vm.contextStack.length,
+      vm.instructionPointer,
+      ":",
+      instruction.explain(),
+    );
 
     // Increment instruction pointer before executing instruction
     // so that the instruction can jump to the next instruction if needed

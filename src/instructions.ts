@@ -232,6 +232,13 @@ class PopAndJumpOnFalseInstruction extends Instruction<[number]> {
   }
 }
 
+class NoopInstruction extends Instruction<[]> {
+  explain() {
+    return "Noop";
+  }
+  do(_vm: VirtualMachine) {}
+}
+
 export const instruction = {
   pushSpecialValue(value: SpecialPushValue): Instruction<[SpecialPushValue]> {
     return new PushSpecialValueInstruction([value]);
@@ -282,5 +289,8 @@ export const instruction = {
   },
   popAndJumpOnFalse(byteOffset: number): Instruction<[number]> {
     return new PopAndJumpOnFalseInstruction([byteOffset]);
+  },
+  noop(): Instruction<[]> {
+    return new NoopInstruction([]);
   },
 };
