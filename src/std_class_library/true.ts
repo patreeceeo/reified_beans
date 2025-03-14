@@ -27,7 +27,7 @@ export const dTrue_ifFalse = {
   instructions: [instruction.noop()],
 };
 
-export const dTrue_not = {
+const not = {
   instructions: [
     // I've been popped off the stack
     // and now I push false in my place
@@ -43,7 +43,7 @@ const dTrue: ClassDescription = {
   methodDict: {
     "ifTrue:": dTrue_ifTrue,
     "ifFalse:": dTrue_ifFalse,
-    not: dTrue_not,
+    not,
   },
 };
 
