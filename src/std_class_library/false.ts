@@ -1,5 +1,5 @@
 import { type ClassDescription } from "src/virtual_objects";
-import { dTrue_ifTrue } from "./true";
+import { dTrue_ifFalse, dTrue_ifTrue } from "./true";
 
 const dFalse: ClassDescription = {
   name: "False",
@@ -7,6 +7,7 @@ const dFalse: ClassDescription = {
   ivars: [],
   classComment: "My instances represent logical inaccuracy.",
   methodDict: {
+    "ifTrue:": dTrue_ifFalse,
     "ifFalse:": dTrue_ifTrue,
   },
 };
