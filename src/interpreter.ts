@@ -8,18 +8,6 @@ import type { VirtualMachine } from "./virtual_machine";
 export class Interpreter {
   constructor(readonly vm: VirtualMachine) {}
 
-  get byteOffsetOfLastInstructionInCurrentContext() {
-    const context = this.vm.contextStack.peek();
-    invariant(context !== undefined, StackUnderflowError, "context");
-    const closure = context.readVarWithName("closure", runtimeTypeNotNil);
-    const instructionRange = closure.readVarWithName(
-      "instructionByteRange",
-      runtimeTypeNotNil,
-    );
-    return instructionRange.readVarWithName("end", runtimeTypePositiveNumber)
-      .primitiveValue;
-  }
-
   private syncInstructionPointer() {
     const context = this.vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
@@ -37,7 +25,7 @@ export class Interpreter {
     const { vm } = this;
     const context = vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
-    const instruction = vm.instructions[vm.instructionPointer];
+    const instruction = vm.currentInstruction;
 
     console.log(
       vm.contextStack.length,
@@ -56,7 +44,7 @@ export class Interpreter {
 
     context.setVarWithName("instructionByteIndex", vm.asLiteral(ip));
 
-    while (ip >= this.byteOffsetOfLastInstructionInCurrentContext) {
+    while (ip > vm.indexOfLastInstructionInCurrentClosure) {
       if (vm.contextStack.length === 1) {
         return false;
       }

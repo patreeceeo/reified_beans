@@ -1,8 +1,5 @@
 import { invariant, RangeError } from "./errors";
-import {
-  runtimeTypeNotNil,
-  runtimeTypePositiveNumber,
-} from "./runtime_type_checks";
+import { runtimeTypePositiveNumber } from "./runtime_type_checks";
 import type { VirtualObject } from "./virtual_objects";
 
 export function jumpRelative(
@@ -14,27 +11,15 @@ export function jumpRelative(
     "instructionByteIndex",
     runtimeTypePositiveNumber,
   );
-  const closure = context.readVarWithName("closure", runtimeTypeNotNil);
-  const instructionRange = closure.readVarWithName(
-    "instructionByteRange",
-    runtimeTypeNotNil,
-  );
-  const min = instructionRange.readVarWithName(
-    "start",
-    runtimeTypePositiveNumber,
-  ).primitiveValue;
-  const max = instructionRange.readVarWithName(
-    "end",
-    runtimeTypePositiveNumber,
-  ).primitiveValue;
   const newIndexPrimitive = instructionByteIndex.primitiveValue + byteOffset;
 
   invariant(
-    newIndexPrimitive >= min && newIndexPrimitive <= max,
+    newIndexPrimitive >= 0 &&
+      newIndexPrimitive <= vm.indexOfLastInstructionInCurrentClosure,
     RangeError,
     newIndexPrimitive,
-    min,
-    max,
+    0,
+    vm.indexOfLastInstructionInCurrentClosure,
     "a valid instruction index",
   );
 

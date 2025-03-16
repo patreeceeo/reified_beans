@@ -23,8 +23,10 @@ export class VirtualMachine {
   internedStrings = Dict<VirtualObject>();
   internedNumbers = [] as VirtualObject[];
 
-  /** The stack-interpreter instructions that have been loaded into the VM */
-  instructions: Instruction<any>[] = [];
+  /** Instructions for all closures */
+  instructionsByClosureId: Instruction<any>[][] = [];
+  /** Index of the current closure being executed */
+  currentClosureId = 0;
   /** Index of the next instruction to execute */
   instructionPointer = 0;
 
@@ -192,22 +194,15 @@ export class VirtualMachine {
     const tempCount = getWithDefault(description, closureDefaults, "tempCount");
 
     // New closures are added to the end of the instructions array
-    const startIndex = this.instructions.length;
-    const instructionByteRange = this.createObject("Range");
+    const closureId = this.instructionsByClosureId.length;
 
-    this.instructions.push(...instructions);
-
-    instructionByteRange.setVarWithName("start", this.asLiteral(startIndex));
-    instructionByteRange.setVarWithName(
-      "end",
-      this.asLiteral(this.instructions.length),
-    );
+    this.instructionsByClosureId.push(instructions);
 
     const closure = this.createObject("Closure");
     closure.setVarWithName("argCount", this.asLiteral(argCount));
     closure.setVarWithName("tempCount", this.asLiteral(tempCount));
     closure.setVarWithName("literals", this.asLiteral(literals));
-    closure.setVarWithName("instructionByteRange", instructionByteRange);
+    closure.setVarWithName("closureId", this.asLiteral(closureId));
 
     return closure;
   }
@@ -270,20 +265,7 @@ export class VirtualMachine {
     context.setVarWithName("evalStack", this.createObject("Array", []));
     context.setVarWithName("receiver", receiver);
     context.setVarWithName("closure", closure);
-    this.setContextByteIndex(context, closure);
-  }
-
-  setContextByteIndex(context: VirtualObject, closure: VirtualObject) {
-    const instructionByteRange = closure.readVarWithName(
-      "instructionByteRange",
-      runtimeTypeNotNil,
-    );
-    const instructionByteOffset = instructionByteRange.readVarWithName(
-      "start",
-      runtimeTypePositiveNumber,
-    );
-
-    context.setVarWithName("instructionByteIndex", instructionByteOffset);
+    context.setVarWithName("instructionByteIndex", this.asLiteral(0));
   }
 
   initializeLocalContextForClosureLiterals(
@@ -321,16 +303,30 @@ export class VirtualMachine {
   /** (TODO:reflect) implement in interpreted language? */
   invokeAsMethod(receiver: VirtualObject, closure: VirtualObject) {
     const context = this.createMethodContext(receiver, closure);
-    const instructionIndex = context.readVarWithName(
-      "instructionByteIndex",
-      runtimeTypePositiveNumber,
-    ).primitiveValue;
 
     this.populateArgs(context, closure);
     this.contextStack.push(context);
-    // jump to the first instruction
-    this.instructionPointer = instructionIndex;
+    this.jumpToStartOfClosureInstructions(closure);
 
     return context;
+  }
+
+  jumpToStartOfClosureInstructions(closure: VirtualObject) {
+    const closureId = closure.readVarWithName(
+      "closureId",
+      runtimeTypePositiveNumber,
+    ).primitiveValue;
+    this.currentClosureId = closureId;
+    this.instructionPointer = 0;
+  }
+
+  get currentInstruction() {
+    return this.instructionsByClosureId[this.currentClosureId][
+      this.instructionPointer
+    ];
+  }
+
+  get indexOfLastInstructionInCurrentClosure() {
+    return this.instructionsByClosureId[this.currentClosureId].length - 1;
   }
 }
