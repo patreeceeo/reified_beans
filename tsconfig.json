@@ -4,6 +4,8 @@
     "paths": {
       "src/*": ["./src/*"],
       "lib/*": ["./lib/*"]
-    }
+    },
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   }
 }
