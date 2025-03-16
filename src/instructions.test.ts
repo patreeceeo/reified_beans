@@ -7,7 +7,6 @@ import {
 } from "./special_value";
 import { ContextValue, ContextVariable, loadContextValue } from "./contexts";
 import { instruction, type Instruction } from "./instructions";
-import type { Dict } from "./generics";
 import { VirtualMachine } from "./virtual_machine";
 import {
   runtimeTypeNotNil,
@@ -15,9 +14,13 @@ import {
 } from "./runtime_type_checks";
 import { jumpRelative } from "./jump";
 import { invokeEmptyMethodOnLiteral } from "./test_helpers";
+import { raise } from "./errors";
 
-const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
-  PushSpecialValueInstruction: (inst) => {
+const instructionTests: Record<
+  keyof typeof instruction,
+  (instruction: Instruction<any>) => void
+> = {
+  pushSpecialValue: (inst) => {
     const [specialValueId] = inst.args;
 
     test("Do it successfully", () => {
@@ -37,7 +40,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  ReturnSpecialValueInstruction: (inst) => {
+  returnSpecialValue: (inst) => {
     const [specialValueId] = inst.args;
 
     test("Do it successfully", () => {
@@ -60,7 +63,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  PushInstruction: (inst) => {
+  push: (inst) => {
     const [contextValue, index] = inst.args;
 
     test("Do it successfully", () => {
@@ -103,7 +106,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  StoreInstruction: (inst) => {
+  store: (inst) => {
     const [target, offset] = inst.args;
     const vm = new VirtualMachine();
     const closure = vm.createClosure({
@@ -153,7 +156,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  PopAndStoreInstruction: (inst) => {
+  popAndStore: (inst) => {
     const [target, offset] = inst.args;
     const vm = new VirtualMachine();
     const closure = vm.createClosure({
@@ -202,7 +205,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  SendLiteralSelectorExtendedInstruction: (inst) => {
+  sendLiteralSelectorExtended: (inst) => {
     const [selectorId] = inst.args;
     const testSelectors = ["+", "-"];
 
@@ -256,7 +259,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  PopInstruction: (inst) => {
+  pop: (inst) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
@@ -285,7 +288,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  DuplicateInstruction: (inst) => {
+  duplicate: (inst) => {
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
@@ -315,7 +318,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  JumpInstruction: (inst) => {
+  jump: (inst) => {
     const [offset] = inst.args;
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
@@ -357,7 +360,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  PopAndJumpOnTrueInstruction: (inst) => {
+  popAndJumpOnTrue: (inst) => {
     const [offset] = inst.args;
     test("Do it successfully (with jump)", () => {
       const vm = new VirtualMachine();
@@ -439,7 +442,7 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  PopAndJumpOnFalseInstruction: (inst) => {
+  popAndJumpOnFalse: (inst) => {
     const [offset] = inst.args;
     test("Do it successfully (with jump)", () => {
       const vm = new VirtualMachine();
@@ -521,16 +524,17 @@ const instructionTests: Dict<(instruction: Instruction<any>) => void> = {
       expect(() => inst.do(vm)).toThrow();
     });
   },
+  noop: () => {},
 };
 
-function testInstruction<I extends Instruction<any>>(instruction: I) {
-  const testDescription = instruction.explain();
-  if (instructionTests[instruction.constructor.name]) {
+function testInstruction<I extends Instruction<any>>(inst: I) {
+  const testDescription = inst.explain();
+  if (instructionTests[inst.type]) {
     describe(testDescription, () => {
-      instructionTests[instruction.constructor.name](instruction);
+      instructionTests[inst.type](inst);
     });
   } else {
-    // TODO throw an error
+    raise(Error, `No tests defined for instruction type: ${inst.type}`);
   }
 }
 

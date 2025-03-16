@@ -16,12 +16,14 @@ import {
 import type { VirtualMachine } from "./virtual_machine";
 
 export abstract class Instruction<Params extends number[]> {
+  abstract type: keyof typeof instruction;
   constructor(readonly args: Params) {}
   abstract explain(): string;
   abstract do(vm: VirtualMachine): void;
 }
 
 class PushSpecialValueInstruction extends Instruction<[SpecialPushValue]> {
+  type = "pushSpecialValue" as const;
   explain() {
     return `Push special value ${SpecialPushValue[this.args[0]]}`;
   }
@@ -35,6 +37,7 @@ class PushSpecialValueInstruction extends Instruction<[SpecialPushValue]> {
 }
 
 class ReturnSpecialValueInstruction extends Instruction<[SpecialReturnValue]> {
+  type = "returnSpecialValue" as const;
   explain() {
     return `Return special value ${SpecialPushValue[this.args[0]]}`;
   }
@@ -46,6 +49,7 @@ class ReturnSpecialValueInstruction extends Instruction<[SpecialReturnValue]> {
 }
 
 class PushInstruction extends Instruction<[ContextValue, number]> {
+  type = "push" as const;
   explain() {
     const [source, offset] = this.args;
     return `Push from ${ContextValue[source]} at offset ${offset}`;
@@ -58,6 +62,7 @@ class PushInstruction extends Instruction<[ContextValue, number]> {
 }
 
 class StoreInstruction extends Instruction<[ContextVariable, number]> {
+  type = "store" as const;
   explain() {
     const [source, offset] = this.args;
     return `Store to ${ContextValue[source]} at offset ${offset}`;
@@ -71,6 +76,7 @@ class StoreInstruction extends Instruction<[ContextVariable, number]> {
 }
 
 class PopAndStoreInstruction extends Instruction<[ContextVariable, number]> {
+  type = "popAndStore" as const;
   explain() {
     const [source, offset] = this.args;
     return `Pop and store to ${ContextValue[source]} at offset ${offset}`;
@@ -86,6 +92,7 @@ class PopAndStoreInstruction extends Instruction<[ContextVariable, number]> {
 class SendLiteralSelectorExtendedInstruction extends Instruction<
   [number, number]
 > {
+  type = "sendLiteralSelectorExtended" as const;
   explain() {
     const [selectorIndex, argumentCount] = this.args;
     return `Send literal selector ${selectorIndex} with ${argumentCount} arguments`;
@@ -113,8 +120,9 @@ class SendLiteralSelectorExtendedInstruction extends Instruction<
 }
 
 class PopInstruction extends Instruction<[]> {
+  type = "pop" as const;
   explain() {
-    return "Pop";
+    return "Pop evaluation stack";
   }
   do(vm: VirtualMachine) {
     invariant(vm.evalStack.stackDepth > 0, StackUnderflowError, "evaluation");
@@ -123,8 +131,9 @@ class PopInstruction extends Instruction<[]> {
 }
 
 class DuplicateInstruction extends Instruction<[]> {
+  type = "duplicate" as const;
   explain() {
-    return "Duplicate";
+    return "Duplicate top of evaluation stack";
   }
   do(vm: VirtualMachine) {
     const object = vm.evalStack.stackTop;
@@ -134,8 +143,9 @@ class DuplicateInstruction extends Instruction<[]> {
 }
 
 class JumpInstruction extends Instruction<[number]> {
+  type = "jump" as const;
   explain() {
-    return `Jump to ${this.args[0]}`;
+    return `Jump to instruction at index ${this.args[0]}`;
   }
   do(vm: VirtualMachine) {
     const context = vm.contextStack.peek();
@@ -146,8 +156,9 @@ class JumpInstruction extends Instruction<[number]> {
 }
 
 class PopAndJumpOnTrueInstruction extends Instruction<[number]> {
+  type = "popAndJumpOnTrue" as const;
   explain() {
-    return `Pop and jump on true to ${this.args[0]}`;
+    return `Pop and jump on true to instruction at index ${this.args[0]}`;
   }
   do(vm: VirtualMachine) {
     const context = vm.contextStack.peek();
@@ -163,8 +174,9 @@ class PopAndJumpOnTrueInstruction extends Instruction<[number]> {
 }
 
 class PopAndJumpOnFalseInstruction extends Instruction<[number]> {
+  type = "popAndJumpOnFalse" as const;
   explain() {
-    return `Pop and jump on false to ${this.args[0]}`;
+    return `Pop and jump on false to instruction at index ${this.args[0]}`;
   }
   do(vm: VirtualMachine) {
     const context = vm.contextStack.peek();
@@ -180,8 +192,9 @@ class PopAndJumpOnFalseInstruction extends Instruction<[number]> {
 }
 
 class NoopInstruction extends Instruction<[]> {
+  type = "noop" as const;
   explain() {
-    return "Noop";
+    return "No operation";
   }
   do(_vm: VirtualMachine) {}
 }
