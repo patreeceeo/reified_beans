@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-const dArray: ClassDescription = {
+const dArray: CompiledClass = {
   name: "Array",
   superClass: "Object",
   ivars: [],

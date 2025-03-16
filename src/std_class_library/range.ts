@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-const dRange: ClassDescription = {
+const dRange: CompiledClass = {
   name: "Range",
   superClass: "Object",
   ivars: ["start", "end"],

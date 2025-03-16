@@ -1,4 +1,4 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 import { dTrue_ifFalse, dTrue_ifTrue } from "./true";
 import { instruction } from "src/instructions";
 import { SpecialPushValue } from "src/special_value";
@@ -11,7 +11,7 @@ const not = {
   ],
 };
 
-const dFalse: ClassDescription = {
+const dFalse: CompiledClass = {
   name: "False",
   superClass: "Boolean",
   ivars: [],

@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-const dMethodContext: ClassDescription = {
+const dMethodContext: CompiledClass = {
   name: "MethodContext",
   superClass: "Context",
   ivars: ["argsAndTemps"],

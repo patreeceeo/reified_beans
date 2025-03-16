@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-const dContext: ClassDescription = {
+const dContext: CompiledClass = {
   name: "Context",
   superClass: "Object",
   ivars: ["evalStack", "instructionByteIndex", "receiver", "closure"],

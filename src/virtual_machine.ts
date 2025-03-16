@@ -1,4 +1,4 @@
-import { closureDefaults, type ClosureDescriptionJs } from "./closures";
+import { closureDefaults, type CompiledClosureDescription } from "./closures";
 import { GlobalContext } from "./contexts";
 import { invariant, raise, StackUnderflowError } from "./errors";
 import { Dict, Stack } from "./generics";
@@ -178,7 +178,7 @@ export class VirtualMachine {
     });
   }
 
-  createClosure(description: ClosureDescriptionJs = {}): VirtualObject {
+  createClosure(description: CompiledClosureDescription = {}): VirtualObject {
     // Since closures are virtual objects but instructions are not, we can't
     // store the instructions in the closure object. Instead, we store them
     // in the VM and reference them by index.

@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-const dClosure: ClassDescription = {
+const dClosure: CompiledClass = {
   name: "Closure",
   superClass: "Object",
   ivars: [

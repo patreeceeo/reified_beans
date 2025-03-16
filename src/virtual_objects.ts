@@ -1,4 +1,4 @@
-import type { ClosureDescriptionJs } from "./closures";
+import type { CompiledClosureDescription } from "./closures";
 import { BindingError, invariant, raise, RangeError } from "./errors";
 import { Dict } from "./generics";
 import {
@@ -231,10 +231,10 @@ export class VirtualObject {
   }
 }
 
-export interface ClassDescription {
+export interface CompiledClass {
   name: string;
   superClass: string;
   ivars: string[];
   classComment: string;
-  methodDict: Record<string, ClosureDescriptionJs>;
+  methodDict: Record<string, CompiledClosureDescription>;
 }

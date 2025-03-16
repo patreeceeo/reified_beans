@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-export const dBehavior: ClassDescription = {
+export const dBehavior: CompiledClass = {
   name: "Behavior",
   superClass: "Object",
   ivars: [],

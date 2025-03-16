@@ -1,7 +1,7 @@
 import { ContextValue } from "src/contexts";
 import { instruction } from "src/instructions";
 import { SpecialPushValue } from "src/special_value";
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
 export const dTrue_ifTrue = {
   argCount: 1,
@@ -35,7 +35,7 @@ const not = {
   ],
 };
 
-const dTrue: ClassDescription = {
+const dTrue: CompiledClass = {
   name: "True",
   superClass: "Boolean",
   ivars: [],

@@ -1,6 +1,6 @@
-import { type ClassDescription } from "src/virtual_objects";
+import { type CompiledClass } from "src/virtual_objects";
 
-const dBlockContext: ClassDescription = {
+const dBlockContext: CompiledClass = {
   name: "BlockContext",
   superClass: "Context",
   ivars: ["localContext"],
