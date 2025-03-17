@@ -1,176 +1,190 @@
 /**
  * Utility functions for compiling an Machine from a workspace.
  */
-import * as Blockly from "blockly/core";
 import { VirtualMachine } from "./virtual_machine";
+import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
+import { instruction, type Instruction } from "./instructions";
+import { ContextValue } from "./contexts";
+import { BindingError, invariant, raise } from "./errors";
 
-// export interface BlockCompiler {
-//   (block: Blockly.Block, compiler: Compiler): void;
-// }
+const exampleProgramClosure: ClosureDescription = {
+  args: [{ id: "block" }, { id: "list" }],
+  temps: [{ id: "count" }],
+  body: [
+    // basic message send
+    {
+      type: "send",
+      receiver: { type: "arg", value: "block" },
+      message: "value",
+    },
 
-export class Compiler {
-  constructor(readonly workspace: Blockly.Workspace) {}
-  compile() {
-    return new VirtualMachine();
-  }
+    // message send with arg
+    {
+      type: "send",
+      receiver: { type: "literal_js", value: 2 },
+      message: "*",
+      args: [{ type: "temp", value: "count" }],
+    },
+
+    // message send with block arg
+    {
+      type: "send",
+      receiver: { type: "literal_js", value: true },
+      message: "ifTrue:",
+      args: [
+        {
+          type: "literal_block",
+          value: {
+            body: [
+              {
+                type: "send",
+                receiver: { type: "literal_js", value: 1 },
+                message: "+",
+                args: [{ type: "literal_js", value: 2 }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+
+    // message send with multiple args
+    {
+      type: "send",
+      receiver: { type: "arg", value: "list" },
+      message: "at:put:",
+      args: [
+        { type: "literal_js", value: 2 },
+        { type: "literal_js", value: 3 },
+      ],
+    },
+
+    // nested expression
+    {
+      type: "send",
+      receiver: {
+        type: "send",
+        receiver: { type: "temp", value: "count" },
+        message: "-",
+      },
+      message: "+",
+      args: [{ type: "literal_js", value: 2 }],
+    },
+
+    // assignment
+    {
+      type: "send",
+      receiver: { type: "temp", value: "count" },
+      message: ":=",
+      args: [{ type: "literal_js", value: 0 }],
+    },
+  ],
+};
+
+export interface Identifier {
+  id: string;
 }
 
-// export class Compiler {
-//   messageBlockQueue = Queue<Blockly.Block>();
-//   statementBlockStack = Stack<Blockly.Block>();
-//   forBlock = forBlock;
-//   opsByProc = Dict<MachineOp[]>();
-//   procStack = Stack<ProcId>();
-//   procById = Dict<ProcValue>();
-//   statementPostfixOps = [] as MachineOp[];
+export interface TempExpression {
+  type: "temp";
+  value: string;
+}
 
-//   constructor(readonly workspace: Blockly.Workspace) {}
+export interface ArgExpression {
+  type: "arg";
+  value: string;
+}
 
-//   reset() {
-//     this.messageBlockQueue = Queue<Blockly.Block>();
-//     this.statementBlockStack = Stack<Blockly.Block>();
-//     this.opsByProc = Dict<MachineOp[]>();
-//     this.procStack = Stack<ProcId>();
-//     this.procById = Dict<ProcValue>();
-//     resetProcId();
-//   }
+export interface SendExpression {
+  type: "send";
+  receiver: Expression;
+  message: string;
+  args?: Expression[];
+}
 
-//   compile() {
-//     this.reset();
-//     const globalProc = this.newProc();
-//     this.pushProc(globalProc.id);
+interface JsLiteralExpression {
+  type: "literal_js";
+  value: AnyLiteralJsValue;
+}
 
-//     // include stdlib
-//     loadStdlib();
-//     for (const classDef of stdlib) {
-//       this.processClass(classDef);
-//     }
+interface BlockLiteralExpression {
+  type: "literal_block";
+  value: ClosureDescription;
+}
 
-//     const blocks = this.workspace.getTopBlocks(true);
-//     for (const block of blocks) {
-//       this.compileBlock(block);
-//     }
-//     this.addOpsToCurrentProc(newMachineOp("Halt"));
+export type Expression =
+  | SendExpression
+  | TempExpression
+  | ArgExpression
+  | JsLiteralExpression
+  | BlockLiteralExpression;
 
-//     const ops = [];
-//     for (const procId in this.opsByProc) {
-//       const proc = this.procById[procId];
-//       invariant(proc !== undefined, Error, "No proc with id");
-//       proc.address = ops.length;
-//       Object.freeze(proc);
+export interface ClosureDescription {
+  args?: Identifier[];
+  temps?: Identifier[];
+  body?: Expression[];
+}
 
-//       ops.push(...this.opsByProc[procId]);
-//     }
+export interface ClassDescription {
+  name: string;
+  superClass: string;
+  ivars: string[];
+  classComment: string;
+  methods: Record<string, ClosureDescription>;
+}
 
-//     // const machine = new Machine(ops, this.procById);
-//     const machine = new Machine(new MachineImage());
-//     return machine;
-//   }
+export class ClassCompiler {
+  constructor(
+    readonly description: ClassDescription,
+    readonly vm: VirtualMachine,
+  ) {}
+  // compile() {
+  //   const { description, vm } = this;
+  //   const superClass = vm.globalContext.at(superClassName);
+  //   const ivars = [...superClass.ivars, ...description.ivars];
+  //   const vClass = new VirtualObject(vm, "Class", ivars);
+  //   for (const [methodName, closureDescription] of Object.entries(
+  //     description.methods,
+  //   )) {
+  //     const closure = this.compileClosure(closureDescription);
+  //     vClass.methodDict[methodName] = closure;
+  //   }
+  // }
 
-//   newProc(): ProcValue {
-//     const proc = new ProcValue();
-//     this.opsByProc[proc.id] = [];
-//     this.procById[proc.id] = proc;
-//     return proc;
-//   }
+  // compileClosure(description: ClosureDescription) {
+  //   const instructions = [] as Instruction<any>[];
+  //   for (const expr of description.body) {
+  //     instructions.push(this.compileExpression(expr, description));
+  //   }
+  // }
 
-//   pushProc(procId: ProcId): void {
-//     this.procStack.push(procId);
-//   }
-
-//   popProc() {
-//     invariant(this.procStack.length > 0, Error, "No proc to pop");
-//     const id = this.procStack.pop()!;
-//     const proc = this.procById[id];
-//     invariant(proc !== undefined, Error, "No proc with id");
-//     proc.lexicalParentScopeProcId = this.procStack.peek();
-//   }
-
-//   addOpsToCurrentProc(...ops: MachineOp[]) {
-//     const { procStack, opsByProc } = this;
-//     const proc = procStack.peek();
-//     invariant(proc !== undefined, Error, "No proc on the stack");
-//     const opsForProc = opsByProc[proc];
-//     invariant(opsForProc !== undefined, Error, "No ops array for proc");
-//     opsForProc.push(...ops);
-//   }
-
-//   queueNextMessageBlock(block: Blockly.Block) {
-//     const nextBlock = block.getInputTargetBlock("NEXT")!;
-//     if (nextBlock) {
-//       this.messageBlockQueue.push(nextBlock);
-//     } else {
-//       console.log("No next block for", block.type);
-//     }
-//   }
-
-//   compileBlock(block: Blockly.Block) {
-//     this.messageBlockQueue.push(block);
-//     this.process();
-//   }
-
-//   pushNextStatementBlock(block: Blockly.Block) {
-//     const nextStatementBlock = block.getNextBlock();
-//     if (nextStatementBlock) {
-//       this.statementBlockStack.push(nextStatementBlock);
-//     }
-//   }
-
-//   getBlockCompiler(block: Blockly.Block): BlockCompiler {
-//     const compiler = this.forBlock[block.type as keyof typeof forBlock];
-//     invariant(
-//       compiler !== undefined,
-//       Error,
-//       `No compiler for block type ${block.type}`,
-//     );
-//     return compiler;
-//   }
-
-//   process() {
-//     let block: Blockly.Block | undefined;
-//     while (true) {
-//       if (this.messageBlockQueue.length > 0) {
-//         block = this.messageBlockQueue.shift()!;
-//       } else {
-//         // Whether or not there's a next statement, need to finish the current statement.
-//         this.addOpsToCurrentProc(...this.statementPostfixOps);
-//         this.statementPostfixOps.length = 0;
-
-//         if (this.statementBlockStack.length > 0) {
-//           block = this.statementBlockStack.pop()!;
-//         } else {
-//           // No more blocks to process
-//           break;
-//         }
-//       }
-
-//       const compiler = this.getBlockCompiler(block);
-//       compiler(block, this);
-//     }
-//   }
-
-//   popStateOp = newMachineOp("PopState");
-//   /** Add ops to a new proc and return the procId */
-//   compileMethod(ops: readonly MachineOp[]) {
-//     const proc = this.newProc();
-//     this.pushProc(proc.id);
-//     this.addOpsToCurrentProc(...ops, this.popStateOp);
-//     this.popProc();
-//     return proc;
-//   }
-
-//   /** Add the class def's methods to new procs and also instruct the machine to
-//    * add the class value to its scope */
-//   processClass(classDef: ClassDefinition<unknown>) {
-//     const procIds = {} as Record<string, ProcId>;
-//     for (const [methodName, methodOps] of Object.entries(
-//       classDef.methodOpsByName,
-//     )) {
-//       const proc = this.compileMethod(methodOps);
-//       procIds[methodName] = proc.id;
-//     }
-//     // const classValue = new ClassValue(procIds, classDef.instantiate);
-//     // const classBoxedValue = getBoxedValue(classValue);
-//     // this.addOpsToCurrentProc(newMachineOp("SetScopeItem", classDef.className, classBoxedValue));
-//   }
-// }
+  compileExpression(
+    expr: Expression,
+    args: Identifier[],
+    temps: Identifier[],
+  ): Instruction<any>[] {
+    switch (expr.type) {
+      case "arg": {
+        const argIndex = args.findIndex((arg) => arg.id === expr.value);
+        invariant(
+          argIndex !== -1,
+          BindingError,
+          this.description.name,
+          String(expr.value),
+        );
+        return [instruction.push(ContextValue.TempVar, argIndex)];
+      }
+      case "temp": {
+        const tempIndex = temps.findIndex((arg) => arg.id === expr.value);
+        invariant(
+          tempIndex !== -1,
+          BindingError,
+          this.description.name,
+          String(expr.value),
+        );
+        return [instruction.push(ContextValue.TempVar, tempIndex)];
+      }
+    }
+    raise(Error, `Unknown expression type ${expr.type}`);
+  }
+}
