@@ -15,7 +15,7 @@ import {
 } from "./special_value";
 import type { VirtualMachine } from "./virtual_machine";
 
-export abstract class Instruction<Params extends number[]> {
+export abstract class Instruction<Params extends (number | string)[]> {
   abstract type: keyof typeof instruction;
   constructor(readonly args: Params) {}
   abstract explain(): string;
@@ -58,6 +58,16 @@ class PushInstruction extends Instruction<[ContextValue, number]> {
     const [source, offset] = this.args;
     const object = loadContextValue(source, offset, vm);
     vm.evalStack.stackPush(object);
+  }
+}
+
+class PushImmediateInstruction extends Instruction<[number | string]> {
+  type = "pushImmediate" as const;
+  explain() {
+    return `Push immediate value ${this.args[0]} on to the evaluation stack`;
+  }
+  do(vm: VirtualMachine) {
+    vm.evalStack.stackPush(vm.asLiteral(this.args[0]));
   }
 }
 
@@ -231,6 +241,16 @@ export const instruction = {
     offset: number,
   ): Instruction<[ContextValue, number]> {
     return new PushInstruction([source, offset]);
+  },
+
+  /**
+   * Push an immediate value onto the eval stack.
+   *
+   * This is an optimization both in terms of runtime and developer cycles. It saves the runtime from having to pull a number or string out of the literals array and it saves the developer from having to make sure the desired string or number is in the literals array.
+   * @param value The value to push
+   */
+  pushImmediate(value: number | string): Instruction<[number | string]> {
+    return new PushImmediateInstruction([value]);
   },
 
   /**

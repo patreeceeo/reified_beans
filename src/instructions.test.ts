@@ -106,6 +106,27 @@ const instructionTests: Record<
       expect(() => inst.do(vm)).toThrow();
     });
   },
+  pushImmediate: (inst) => {
+    const [value] = inst.args;
+
+    test("Do it successfully", () => {
+      const vm = new VirtualMachine();
+      const closure = vm.createClosure({
+        tempCount: 4,
+      });
+      const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
+      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+
+      inst.do(vm);
+
+      expect(evalStack.stackTop).toBe(vm.asLiteral(value));
+    });
+
+    test("Fail if the contextStack is empty", () => {
+      const vm = new VirtualMachine();
+      expect(() => inst.do(vm)).toThrow();
+    });
+  },
   store: (inst) => {
     const [target, offset] = inst.args;
     const vm = new VirtualMachine();
@@ -545,6 +566,7 @@ describe("Instructions", () => {
   testInstruction(instruction.push(ContextValue.TempVar, 3));
   testInstruction(instruction.push(ContextValue.LiteralConst, 3));
   testInstruction(instruction.push(ContextValue.LiteralVar, 3));
+  testInstruction(instruction.pushImmediate("foo"));
   testInstruction(instruction.store(ContextVariable.ReceiverVar, 2));
   testInstruction(instruction.store(ContextVariable.LiteralVar, 3));
   testInstruction(instruction.store(ContextVariable.TempVar, 3));
