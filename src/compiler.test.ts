@@ -6,8 +6,9 @@ import {
   type Expression,
   type Identifier,
 } from "./compiler";
-import { instruction } from "./instructions";
+import { Instruction, instruction } from "./instructions";
 import { ContextValue } from "./contexts";
+import type { Dict } from "./generics";
 
 const classDescription: ClassDescription = {
   name: "ExampleClass",
@@ -17,44 +18,101 @@ const classDescription: ClassDescription = {
   classComment: "",
 };
 
+interface CompileExpressionTestCase {
+  given: {
+    expression: Expression;
+    args: Identifier[];
+    temps: Identifier[];
+  };
+  expect:
+    | {
+        instructions: Instruction<any>[];
+      }
+    | {
+        throw: true;
+      };
+}
+
+const compileExpressionTests: Dict<CompileExpressionTestCase> = {
+  "arg success": {
+    given: {
+      expression: {
+        type: "arg",
+        value: "y",
+      },
+      args: [{ id: "x" }, { id: "y" }],
+      temps: [],
+    },
+    expect: {
+      instructions: [instruction.push(ContextValue.TempVar, 1)],
+    },
+  },
+  "arg fail": {
+    given: {
+      expression: {
+        type: "arg",
+        value: "y",
+      },
+      args: [],
+      temps: [],
+    },
+    expect: {
+      throw: true,
+    },
+  },
+  "temp success": {
+    given: {
+      expression: {
+        type: "temp",
+        value: "y",
+      },
+      args: [],
+      temps: [{ id: "x" }, { id: "y" }],
+    },
+    expect: {
+      instructions: [instruction.push(ContextValue.TempVar, 1)],
+    },
+  },
+  "temp fail": {
+    given: {
+      expression: {
+        type: "temp",
+        value: "y",
+      },
+      args: [],
+      temps: [],
+    },
+    expect: {
+      throw: true,
+    },
+  },
+};
+
 describe("compiler", () => {
   describe("compileExpression", () => {
-    describe("arg expression", () => {
-      test("success", () => {
+    for (const [name, testCase] of Object.entries(compileExpressionTests)) {
+      test(name, () => {
         const vm = new VirtualMachine();
         const compiler = new ClassCompiler(classDescription, vm);
+        const { given, expect: expectData } = testCase;
 
-        const expression: Expression = {
-          type: "arg",
-          value: "y",
-        };
-
-        const args: Identifier[] = [{ id: "x" }, { id: "y" }];
-        const temps: Identifier[] = [];
-
-        const result = compiler.compileExpression(expression, args, temps);
-
-        expect(result).toEqual([instruction.push(ContextValue.TempVar, 1)]);
+        if ("throw" in expectData) {
+          expect(() => {
+            compiler.compileExpression(
+              given.expression,
+              given.args,
+              given.temps,
+            );
+          }).toThrow();
+        } else {
+          const result = compiler.compileExpression(
+            given.expression,
+            given.args,
+            given.temps,
+          );
+          expect(result).toEqual(expectData.instructions);
+        }
       });
-    });
-
-    describe("temp expression", () => {
-      test("success", () => {
-        const vm = new VirtualMachine();
-        const compiler = new ClassCompiler(classDescription, vm);
-
-        const expression: Expression = {
-          type: "temp",
-          value: "y",
-        };
-
-        const args: Identifier[] = [];
-        const temps: Identifier[] = [{ id: "x" }, { id: "y" }];
-
-        const result = compiler.compileExpression(expression, args, temps);
-
-        expect(result).toEqual([instruction.push(ContextValue.TempVar, 1)]);
-      });
-    });
+    }
   });
 });
