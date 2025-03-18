@@ -179,6 +179,13 @@ export class ClassCompiler {
         const sendArgsInstructions = sendArgs.flatMap((arg) =>
           this.compileExpression(arg, args, temps, literals),
         );
+        const literalIndex = literals[expr.message];
+        invariant(
+          literalIndex !== undefined,
+          Error,
+          `Unknown message ${expr.message}`,
+        );
+
         return [
           ...sendArgsInstructions,
           ...receiverInstructions,

@@ -121,6 +121,20 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       ],
     },
   },
+  "send fail": {
+    given: {
+      expression: {
+        type: "send",
+        receiver: { type: "arg", value: "x" },
+        message: "foo",
+      },
+      args: [{ id: "x" }],
+      // "foo" is not in literals
+    },
+    expect: {
+      throw: true,
+    },
+  },
 };
 
 describe("compiler", () => {
