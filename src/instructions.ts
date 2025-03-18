@@ -6,7 +6,7 @@ import {
 } from "./contexts";
 import { invariant, StackUnderflowError } from "./errors";
 import { jumpRelative } from "./jump";
-import { runtimeTypeNotNil, runtimeTypeString } from "./runtime_type_checks";
+import { runtimeTypeNotNil } from "./runtime_type_checks";
 import {
   reifySpecialPushValue,
   reifySpecialReturnValue,
@@ -14,8 +14,9 @@ import {
   SpecialReturnValue,
 } from "./special_value";
 import type { VirtualMachine } from "./virtual_machine";
+import type { AnyPrimitiveJsValue } from "./virtual_objects";
 
-export abstract class Instruction<Params extends (number | string)[]> {
+export abstract class Instruction<Params extends AnyPrimitiveJsValue[]> {
   abstract type: keyof typeof instruction;
   constructor(readonly args: Params) {}
   abstract explain(): string;
@@ -61,7 +62,7 @@ class PushInstruction extends Instruction<[ContextValue, number]> {
   }
 }
 
-class PushImmediateInstruction extends Instruction<[number | string]> {
+class PushImmediateInstruction extends Instruction<[AnyPrimitiveJsValue]> {
   type = "pushImmediate" as const;
   explain() {
     return `Push immediate value ${this.args[0]} on to the evaluation stack`;
@@ -202,7 +203,9 @@ class NoopInstruction extends Instruction<[]> {
 
 export const instruction = {
   /**
-   * Push a special value onto the eval Stack
+   * Push a special value onto the eval stack
+   *
+   * TODO deprecate in favor of pushImmediate?
    * @param value The special value to Push
    * @see SpecialPushValue
    */
@@ -240,7 +243,9 @@ export const instruction = {
    * This is an optimization both in terms of runtime and developer cycles. It saves the runtime from having to pull a number or string out of the literals array and it saves the developer from having to make sure the desired string or number is in the literals array.
    * @param value The value to push
    */
-  pushImmediate(value: number | string): Instruction<[number | string]> {
+  pushImmediate(
+    value: AnyPrimitiveJsValue,
+  ): Instruction<[AnyPrimitiveJsValue]> {
     return new PushImmediateInstruction([value]);
   },
 

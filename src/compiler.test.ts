@@ -120,16 +120,48 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       ],
     },
   },
-  "JS literal (number)": {
+  "JS number": {
     given: {
       expression: {
-        type: "literal_js",
+        type: "js_primitive",
         value: 42,
       },
-      literals: new Map([[42, 0]]),
     },
     expect: {
-      instructions: [instruction.push(ContextValue.LiteralConst, 0)],
+      instructions: [instruction.pushImmediate(42)],
+    },
+  },
+  "JS string": {
+    given: {
+      expression: {
+        type: "js_primitive",
+        value: "hello",
+      },
+    },
+    expect: {
+      instructions: [instruction.pushImmediate("hello")],
+    },
+  },
+  "JS boolean": {
+    given: {
+      expression: {
+        type: "js_primitive",
+        value: true,
+      },
+    },
+    expect: {
+      instructions: [instruction.pushImmediate(true)],
+    },
+  },
+  "JS undefined": {
+    given: {
+      expression: {
+        type: "js_primitive",
+        value: undefined,
+      },
+    },
+    expect: {
+      instructions: [instruction.pushImmediate(undefined)],
     },
   },
 };

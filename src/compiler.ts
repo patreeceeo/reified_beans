@@ -2,7 +2,11 @@
  * Utility functions for compiling an Machine from a workspace.
  */
 import { VirtualMachine } from "./virtual_machine";
-import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
+import {
+  VirtualObject,
+  type AnyLiteralJsValue,
+  type AnyPrimitiveJsValue,
+} from "./virtual_objects";
 import { instruction, type Instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import { BindingError, invariant, raise } from "./errors";
@@ -21,7 +25,7 @@ const exampleProgramClosure: ClosureDescription = {
     // message send with arg
     {
       type: "send",
-      receiver: { type: "literal_js", value: 2 },
+      receiver: { type: "js_primitive", value: 2 },
       message: "*",
       args: [{ type: "temp", value: "count" }],
     },
@@ -29,7 +33,7 @@ const exampleProgramClosure: ClosureDescription = {
     // message send with block arg
     {
       type: "send",
-      receiver: { type: "literal_js", value: true },
+      receiver: { type: "js_primitive", value: true },
       message: "ifTrue:",
       args: [
         {
@@ -38,9 +42,9 @@ const exampleProgramClosure: ClosureDescription = {
             body: [
               {
                 type: "send",
-                receiver: { type: "literal_js", value: 1 },
+                receiver: { type: "js_primitive", value: 1 },
                 message: "+",
-                args: [{ type: "literal_js", value: 2 }],
+                args: [{ type: "js_primitive", value: 2 }],
               },
             ],
           },
@@ -54,8 +58,8 @@ const exampleProgramClosure: ClosureDescription = {
       receiver: { type: "arg", value: "list" },
       message: "at:put:",
       args: [
-        { type: "literal_js", value: 2 },
-        { type: "literal_js", value: 3 },
+        { type: "js_primitive", value: 2 },
+        { type: "js_primitive", value: 3 },
       ],
     },
 
@@ -68,7 +72,7 @@ const exampleProgramClosure: ClosureDescription = {
         message: "-",
       },
       message: "+",
-      args: [{ type: "literal_js", value: 2 }],
+      args: [{ type: "js_primitive", value: 2 }],
     },
 
     // assignment
@@ -76,7 +80,7 @@ const exampleProgramClosure: ClosureDescription = {
       type: "send",
       receiver: { type: "temp", value: "count" },
       message: ":=",
-      args: [{ type: "literal_js", value: 0 }],
+      args: [{ type: "js_primitive", value: 0 }],
     },
   ],
 };
@@ -102,9 +106,9 @@ export interface SendExpression {
   args?: Expression[];
 }
 
-interface JsLiteralExpression {
-  type: "literal_js";
-  value: AnyLiteralJsValue;
+interface JsPrimitiveExpression {
+  type: "js_primitive";
+  value: AnyPrimitiveJsValue;
 }
 
 interface BlockLiteralExpression {
@@ -116,7 +120,7 @@ export type Expression =
   | SendExpression
   | TempExpression
   | ArgExpression
-  | JsLiteralExpression
+  | JsPrimitiveExpression
   | BlockLiteralExpression;
 
 export interface ClosureDescription {
@@ -185,14 +189,8 @@ export class ClassCompiler {
           instruction.sendSelector(expr.message, sendArgs.length),
         ];
       }
-      case "literal_js": {
-        const literalIndex = literals.get(expr.value);
-        invariant(
-          literalIndex !== undefined,
-          Error,
-          `Unknown literal ${expr.value}`,
-        );
-        return [instruction.push(ContextValue.LiteralConst, literalIndex)];
+      case "js_primitive": {
+        return [instruction.pushImmediate(expr.value)];
       }
     }
     raise(Error, `Unknown expression type ${expr.type}`);
