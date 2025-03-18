@@ -6,7 +6,6 @@ import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
 import { instruction, type Instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import { BindingError, invariant, raise } from "./errors";
-import type { Dict } from "./generics";
 
 const exampleProgramClosure: ClosureDescription = {
   args: [{ id: "block" }, { id: "list" }],
@@ -145,7 +144,7 @@ export class ClassCompiler {
     expr: Expression,
     args: Identifier[],
     temps: Identifier[],
-    literals: Dict<number>,
+    literals: Map<AnyLiteralJsValue, number>,
   ): Instruction<any>[] {
     switch (expr.type) {
       case "arg": {
@@ -179,7 +178,7 @@ export class ClassCompiler {
         const sendArgsInstructions = sendArgs.flatMap((arg) =>
           this.compileExpression(arg, args, temps, literals),
         );
-        const literalIndex = literals[expr.message];
+        const literalIndex = literals.get(expr.message);
         invariant(
           literalIndex !== undefined,
           Error,
@@ -190,10 +189,19 @@ export class ClassCompiler {
           ...sendArgsInstructions,
           ...receiverInstructions,
           instruction.sendLiteralSelectorExtended(
-            literals[expr.message],
+            literalIndex,
             sendArgs.length,
           ),
         ];
+      }
+      case "literal_js": {
+        const literalIndex = literals.get(expr.value);
+        invariant(
+          literalIndex !== undefined,
+          Error,
+          `Unknown literal ${expr.value}`,
+        );
+        return [instruction.push(ContextValue.LiteralConst, literalIndex)];
       }
     }
     raise(Error, `Unknown expression type ${expr.type}`);

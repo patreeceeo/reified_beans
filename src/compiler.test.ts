@@ -9,6 +9,7 @@ import {
 import { Instruction, instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import type { Dict } from "./generics";
+import type { AnyLiteralJsValue } from "./virtual_objects";
 
 const classDescription: ClassDescription = {
   name: "ExampleClass",
@@ -23,7 +24,7 @@ interface CompileExpressionTestCase {
     expression: Expression;
     args?: Identifier[];
     temps?: Identifier[];
-    literals?: Dict<number>;
+    literals?: Map<AnyLiteralJsValue, number>;
   };
   expect:
     | {
@@ -89,7 +90,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         message: "foo",
       },
       args: [{ id: "x" }],
-      literals: { foo: 23 },
+      literals: new Map([["foo", 23]]),
     },
     expect: {
       instructions: [
@@ -110,7 +111,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         ],
       },
       args: [{ id: "x" }, { id: "y" }],
-      literals: { foo: 23 },
+      literals: new Map([["foo", 23]]),
     },
     expect: {
       instructions: [
@@ -135,6 +136,18 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       throw: true,
     },
   },
+  "JS literal (number)": {
+    given: {
+      expression: {
+        type: "literal_js",
+        value: 42,
+      },
+      literals: new Map([[42, 0]]),
+    },
+    expect: {
+      instructions: [instruction.push(ContextValue.LiteralConst, 0)],
+    },
+  },
 };
 
 describe("compiler", () => {
@@ -146,7 +159,7 @@ describe("compiler", () => {
         const { given, expect: expectData } = testCase;
         const args = given.args ?? [];
         const temps = given.temps ?? [];
-        const literals = given.literals ?? {};
+        const literals = given.literals ?? new Map();
 
         if ("throw" in expectData) {
           expect(() => {
