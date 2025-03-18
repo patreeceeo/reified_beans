@@ -98,6 +98,29 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       ],
     },
   },
+  "send success (with args)": {
+    given: {
+      expression: {
+        type: "send",
+        receiver: { type: "arg", value: "x" },
+        message: "foo",
+        args: [
+          { type: "arg", value: "y" },
+          { type: "arg", value: "x" },
+        ],
+      },
+      args: [{ id: "x" }, { id: "y" }],
+      literals: { foo: 23 },
+    },
+    expect: {
+      instructions: [
+        instruction.push(ContextValue.TempVar, 1),
+        instruction.push(ContextValue.TempVar, 0),
+        instruction.push(ContextValue.TempVar, 0),
+        instruction.sendLiteralSelectorExtended(23, 2),
+      ],
+    },
+  },
 };
 
 describe("compiler", () => {

@@ -175,7 +175,12 @@ export class ClassCompiler {
           temps,
           literals,
         );
+        const sendArgs = expr.args ?? [];
+        const sendArgsInstructions = sendArgs.flatMap((arg) =>
+          this.compileExpression(arg, args, temps, literals),
+        );
         return [
+          ...sendArgsInstructions,
           ...receiverInstructions,
           instruction.sendLiteralSelectorExtended(
             literals[expr.message],
