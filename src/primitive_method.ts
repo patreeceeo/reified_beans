@@ -53,7 +53,7 @@ primitiveMethodDict["+"] = {
       return false;
     }
     const [receiver, arg] = arithmeticOpArgs;
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
     evalStack.stackPush(vm.asLiteral(receiver + arg));
     return true;
@@ -68,7 +68,7 @@ primitiveMethodDict["-"] = {
       return false;
     }
     const [receiver, arg] = arithmeticOpArgs;
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
     evalStack.stackPush(vm.asLiteral(receiver - arg));
     return true;
@@ -79,7 +79,7 @@ primitiveMethodDict["at:"] = {
   attempt(vm: VirtualMachine): boolean {
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
     const receiver = evalStack.stackPop();
     const arg = evalStack.stackPop();
 
@@ -92,7 +92,7 @@ primitiveMethodDict["at:"] = {
       return false;
     }
 
-    const value = receiver.readIndex(arg.primitiveValue);
+    const value = receiver.readIndexedVar(arg.primitiveValue);
     evalStack.stackPush(value);
     return true;
   },
@@ -104,7 +104,7 @@ primitiveMethodDict["value"] = {
     const closure = evalStack.stackPop();
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const receiver = context.readVarWithName("receiver", runtimeTypeNotNil);
+    const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
 
     invariant(closure, StackUnderflowError, "evaluation");
 
@@ -117,7 +117,7 @@ function loadArithmeticOpArgs(
   context: VirtualObject,
   target: [number, number],
 ): boolean {
-  const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+  const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
   const receiver = evalStack.stackPop();
   invariant(receiver, StackUnderflowError, "evaluation");
   const arg = evalStack.stackTop;

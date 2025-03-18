@@ -44,7 +44,7 @@ export function reifySpecialPushValue(
     case SpecialPushValue.Self:
       const context = vm.contextStack.peek();
       invariant(context, StackUnderflowError, "context");
-      return context.readVarWithName("receiver", runtimeTypeNotNil);
+      return context.readNamedVar("receiver", runtimeTypeNotNil);
     case SpecialPushValue.True:
       return vm.asLiteral(true);
     case SpecialPushValue.False:

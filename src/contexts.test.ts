@@ -13,15 +13,15 @@ describe("ContextValue", () => {
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
     const receiver = vm.createObject("TestObject");
     const context = vm.createMethodContext(receiver, closure);
-    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
-    const argsAndTemps = context.readVarWithName(
+    const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
+    const argsAndTemps = context.readNamedVar(
       "argsAndTemps",
       runtimeTypeNotNil,
     );
 
     vm.contextStack.push(context);
-    literals.setIndex(3, vm.asLiteral("Object"));
-    argsAndTemps.setIndex(3, vm.asLiteral(42));
+    literals.writeIndexedVar(3, vm.asLiteral("Object"));
+    argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
     receiver.setVar(2, vm.asLiteral(true));
 
     test(ContextValue[ContextValue.ReceiverVar], () => {
@@ -30,11 +30,11 @@ describe("ContextValue", () => {
     });
     test(ContextValue[ContextValue.TempVar], () => {
       const result = loadContextValue(ContextValue.TempVar, 3, vm);
-      expect(result).toBe(argsAndTemps.readIndex(3));
+      expect(result).toBe(argsAndTemps.readIndexedVar(3));
     });
     test(ContextValue[ContextValue.LiteralConst], () => {
       const result = loadContextValue(ContextValue.LiteralConst, 3, vm);
-      expect(result).toBe(literals.readIndex(3));
+      expect(result).toBe(literals.readIndexedVar(3));
     });
     test(ContextValue[ContextValue.LiteralVar], () => {
       const result = loadContextValue(ContextValue.LiteralVar, 3, vm);

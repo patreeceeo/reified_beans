@@ -157,7 +157,7 @@ export class VirtualObject {
     this.vars[id] = value;
   }
 
-  setIndex(index: number, value: VirtualObject) {
+  writeIndexedVar(index: number, value: VirtualObject) {
     this.setVar(index + this.namedVarCount, value, false);
   }
 
@@ -166,7 +166,7 @@ export class VirtualObject {
     return this.vars[id] ?? this.vm.vNil;
   }
 
-  readIndex<PrimitiveType = AnyLiteralJsValue>(
+  readIndexedVar<PrimitiveType = AnyLiteralJsValue>(
     index: number,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
@@ -179,7 +179,7 @@ export class VirtualObject {
     return this.vClass.ivars.indexOf(name);
   }
 
-  readVarWithName<PrimitiveType = AnyLiteralJsValue>(
+  readNamedVar<PrimitiveType = AnyLiteralJsValue>(
     name: string,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
@@ -190,7 +190,7 @@ export class VirtualObject {
     return value;
   }
 
-  setVarWithName(name: string, value: VirtualObject) {
+  writeNamedVar(name: string, value: VirtualObject) {
     this.setVar(this.getVarId(name), value);
   }
 
@@ -207,7 +207,7 @@ export class VirtualObject {
     if (selector in this.methodDict) {
       return this.methodDict[selector];
     } else {
-      const vSuperClass = this.readVarWithName("superClass");
+      const vSuperClass = this.readNamedVar("superClass");
       if (!vSuperClass.isNil) {
         return vSuperClass.getInstanceMethod(selector);
       }

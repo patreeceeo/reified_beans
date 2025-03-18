@@ -32,7 +32,7 @@ class PushSpecialValueInstruction extends Instruction<[SpecialPushValue]> {
     const object = reifySpecialPushValue(this.args[0], vm);
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
     evalStack.stackPush(object);
   }
 }

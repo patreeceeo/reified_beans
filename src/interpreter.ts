@@ -11,7 +11,7 @@ export class Interpreter {
   private syncInstructionPointer() {
     const context = this.vm.contextStack.peek();
     invariant(context !== undefined, StackUnderflowError, "context");
-    const instructionIndex = context.readVarWithName(
+    const instructionIndex = context.readNamedVar(
       "instructionByteIndex",
       runtimeTypePositiveNumber,
     );
@@ -42,7 +42,7 @@ export class Interpreter {
 
     const ip = vm.instructionPointer;
 
-    context.setVarWithName("instructionByteIndex", vm.asLiteral(ip));
+    context.writeNamedVar("instructionByteIndex", vm.asLiteral(ip));
 
     while (ip > vm.indexOfLastInstructionInCurrentClosure) {
       if (vm.contextStack.length === 1) {

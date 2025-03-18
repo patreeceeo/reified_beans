@@ -7,7 +7,7 @@ export function jumpRelative(
   byteOffset: number,
   vm = context.vm,
 ) {
-  const instructionByteIndex = context.readVarWithName(
+  const instructionByteIndex = context.readNamedVar(
     "instructionByteIndex",
     runtimeTypePositiveNumber,
   );
@@ -23,7 +23,7 @@ export function jumpRelative(
     "a valid instruction index",
   );
 
-  context.setVarWithName(
+  context.writeNamedVar(
     "instructionByteIndex",
     vm.asLiteral(newIndexPrimitive),
   );

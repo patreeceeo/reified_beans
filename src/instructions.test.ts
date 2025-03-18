@@ -29,7 +29,7 @@ const instructionTests: Record<
 
       inst.do(vm);
 
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
       expect(evalStack.stackTop).toBe(
         reifySpecialPushValue(specialValueId, vm),
       );
@@ -50,7 +50,7 @@ const instructionTests: Record<
 
       inst.do(vm);
 
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
       expect(evalStack.stackTop).toBe(
         reifySpecialReturnValue(specialValueId, vm),
       );
@@ -74,16 +74,16 @@ const instructionTests: Record<
       });
       vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
       const context = vm.invokeAsMethod(vm.createObject("TestObject"), closure);
-      const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
-      const argsAndTemps = context.readVarWithName(
+      const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
+      const argsAndTemps = context.readNamedVar(
         "argsAndTemps",
         runtimeTypeNotNil,
       );
-      const receiver = context.readVarWithName("receiver", runtimeTypeNotNil);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
-      literals.setIndex(3, vm.asLiteral("Object"));
-      argsAndTemps.setIndex(3, vm.asLiteral(42));
+      literals.writeIndexedVar(3, vm.asLiteral("Object"));
+      argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
       receiver.setVar(2, vm.asLiteral(true));
       const value = loadContextValue(contextValue, index, vm);
 
@@ -115,7 +115,7 @@ const instructionTests: Record<
         tempCount: 4,
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       inst.do(vm);
 
@@ -137,21 +137,21 @@ const instructionTests: Record<
     vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
     const vTestObject = vm.createObject("TestObject");
     const context = vm.invokeAsMethod(vTestObject, closure);
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
     const emptyClosure = vm.createClosure();
 
-    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+    const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
 
     evalStack.stackPush(vm.asLiteral("value"));
-    literals.setIndex(3, vm.asLiteral("Object"));
+    literals.writeIndexedVar(3, vm.asLiteral("Object"));
 
-    const argsAndTemps = context.readVarWithName(
+    const argsAndTemps = context.readNamedVar(
       "argsAndTemps",
       runtimeTypeNotNil,
     );
-    argsAndTemps.setIndex(3, vm.asLiteral(42));
-    const receiver = context.readVarWithName("receiver", runtimeTypeNotNil);
+    argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
+    const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
     receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
@@ -172,7 +172,7 @@ const instructionTests: Record<
     test("Fail if the closure or context is lacking the specified variable", () => {
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), emptyClosure);
 
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
       evalStack.stackPush(vm.asLiteral("value"));
       expect(() => inst.do(vm)).toThrow();
     });
@@ -188,18 +188,18 @@ const instructionTests: Record<
     const receiver = vm.createObject("TestObject");
     const context = vm.invokeAsMethod(receiver, closure);
     const pushedValue = vm.asLiteral("value");
-    const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
-    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+    const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
 
     evalStack.stackPush(pushedValue);
-    literals.setIndex(3, vm.asLiteral("Object"));
+    literals.writeIndexedVar(3, vm.asLiteral("Object"));
 
-    const argsAndTemps = context.readVarWithName(
+    const argsAndTemps = context.readNamedVar(
       "argsAndTemps",
       runtimeTypeNotNil,
     );
-    argsAndTemps.setIndex(3, vm.asLiteral(42));
+    argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
     receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
@@ -217,7 +217,7 @@ const instructionTests: Record<
       const emptyClosure = vm.createClosure();
       const emptyContext = vm.invokeAsMethod(receiver, emptyClosure);
 
-      const evalStack = emptyContext.readVarWithName(
+      const evalStack = emptyContext.readNamedVar(
         "evalStack",
         runtimeTypeNotNil,
       );
@@ -281,7 +281,7 @@ const instructionTests: Record<
         tempCount: 4,
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       evalStack.stackPush(vm.asLiteral("value"));
 
@@ -310,7 +310,7 @@ const instructionTests: Record<
         tempCount: 4,
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       evalStack.stackPush(vm.asLiteral("value"));
 
@@ -342,7 +342,7 @@ const instructionTests: Record<
         instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const previousInsturctionByteOffset = context.readVarWithName(
+      const previousInsturctionByteOffset = context.readNamedVar(
         "instructionByteIndex",
         runtimeTypePositiveNumber,
       ).primitiveValue;
@@ -352,10 +352,8 @@ const instructionTests: Record<
       inst.do(vm);
 
       expect(
-        context.readVarWithName(
-          "instructionByteIndex",
-          runtimeTypePositiveNumber,
-        ).primitiveValue,
+        context.readNamedVar("instructionByteIndex", runtimeTypePositiveNumber)
+          .primitiveValue,
       ).toBe(previousInsturctionByteOffset + 5 + offset);
     });
 
@@ -384,7 +382,7 @@ const instructionTests: Record<
         instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const previousInsturctionByteOffset = context.readVarWithName(
+      const previousInsturctionByteOffset = context.readNamedVar(
         "instructionByteIndex",
         runtimeTypePositiveNumber,
       ).primitiveValue;
@@ -395,10 +393,8 @@ const instructionTests: Record<
       inst.do(vm);
 
       expect(
-        context.readVarWithName(
-          "instructionByteIndex",
-          runtimeTypePositiveNumber,
-        ).primitiveValue,
+        context.readNamedVar("instructionByteIndex", runtimeTypePositiveNumber)
+          .primitiveValue,
       ).toBe(previousInsturctionByteOffset + 5 + offset);
     });
 
@@ -409,8 +405,8 @@ const instructionTests: Record<
         instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-      const previousInsturctionByteOffset = context.readVarWithName(
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
+      const previousInsturctionByteOffset = context.readNamedVar(
         "instructionByteIndex",
         runtimeTypePositiveNumber,
       ).primitiveValue;
@@ -420,10 +416,8 @@ const instructionTests: Record<
       inst.do(vm);
 
       expect(
-        context.readVarWithName(
-          "instructionByteIndex",
-          runtimeTypePositiveNumber,
-        ).primitiveValue,
+        context.readNamedVar("instructionByteIndex", runtimeTypePositiveNumber)
+          .primitiveValue,
       ).toBe(previousInsturctionByteOffset);
     });
 
@@ -433,7 +427,7 @@ const instructionTests: Record<
         tempCount: 4,
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       evalStack.stackPush(vm.asLiteral(true));
 
@@ -466,8 +460,8 @@ const instructionTests: Record<
         instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-      const previousInsturctionByteOffset = context.readVarWithName(
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
+      const previousInsturctionByteOffset = context.readNamedVar(
         "instructionByteIndex",
         runtimeTypePositiveNumber,
       ).primitiveValue;
@@ -478,10 +472,8 @@ const instructionTests: Record<
       inst.do(vm);
 
       expect(
-        context.readVarWithName(
-          "instructionByteIndex",
-          runtimeTypePositiveNumber,
-        ).primitiveValue,
+        context.readNamedVar("instructionByteIndex", runtimeTypePositiveNumber)
+          .primitiveValue,
       ).toBe(previousInsturctionByteOffset + 5 + offset);
     });
 
@@ -492,8 +484,8 @@ const instructionTests: Record<
         instructions: new Array(12).fill(null).map(() => instruction.pop()),
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
-      const previousInsturctionByteOffset = context.readVarWithName(
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
+      const previousInsturctionByteOffset = context.readNamedVar(
         "instructionByteIndex",
         runtimeTypePositiveNumber,
       ).primitiveValue;
@@ -503,10 +495,8 @@ const instructionTests: Record<
       inst.do(vm);
 
       expect(
-        context.readVarWithName(
-          "instructionByteIndex",
-          runtimeTypePositiveNumber,
-        ).primitiveValue,
+        context.readNamedVar("instructionByteIndex", runtimeTypePositiveNumber)
+          .primitiveValue,
       ).toBe(previousInsturctionByteOffset);
     });
 
@@ -516,7 +506,7 @@ const instructionTests: Record<
         tempCount: 4,
       });
       const context = vm.invokeAsMethod(vm.asLiteral(undefined), closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       evalStack.stackPush(vm.asLiteral(false));
 

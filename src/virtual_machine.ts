@@ -94,12 +94,9 @@ export class VirtualMachine {
 
     for (const cls of classDescriptions) {
       const vClass = this.globalContext.at(cls.name);
-      vClass.setVarWithName("className", this.asLiteral(cls.name));
-      vClass.setVarWithName(
-        "superClass",
-        this.globalContext.at(cls.superClass),
-      );
-      vClass.setVarWithName("classComment", this.asLiteral(cls.classComment));
+      vClass.writeNamedVar("className", this.asLiteral(cls.name));
+      vClass.writeNamedVar("superClass", this.globalContext.at(cls.superClass));
+      vClass.writeNamedVar("classComment", this.asLiteral(cls.classComment));
 
       for (const [selector, description] of Object.entries(cls.methodDict)) {
         const closure = this.createClosure(description);
@@ -124,7 +121,7 @@ export class VirtualMachine {
   get evalStack() {
     const context = this.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    return context.readVarWithName("evalStack", runtimeTypeNotNil);
+    return context.readNamedVar("evalStack", runtimeTypeNotNil);
   }
 
   peekNextReceiver() {
@@ -199,21 +196,21 @@ export class VirtualMachine {
     this.instructionsByClosureId.push(instructions);
 
     const closure = this.createObject("Closure");
-    closure.setVarWithName("argCount", this.asLiteral(argCount));
-    closure.setVarWithName("tempCount", this.asLiteral(tempCount));
-    closure.setVarWithName("literals", this.asLiteral(literals));
-    closure.setVarWithName("closureId", this.asLiteral(closureId));
+    closure.writeNamedVar("argCount", this.asLiteral(argCount));
+    closure.writeNamedVar("tempCount", this.asLiteral(tempCount));
+    closure.writeNamedVar("literals", this.asLiteral(literals));
+    closure.writeNamedVar("closureId", this.asLiteral(closureId));
 
     return closure;
   }
 
   createMethodContext(receiver: VirtualObject, closure: VirtualObject) {
     const context = this.createObject("MethodContext");
-    const argCount = closure.readVarWithName(
+    const argCount = closure.readNamedVar(
       "argCount",
       runtimeTypePositiveNumber,
     );
-    const tempCount = closure.readVarWithName(
+    const tempCount = closure.readNamedVar(
       "tempCount",
       runtimeTypePositiveNumber,
     );
@@ -225,7 +222,7 @@ export class VirtualMachine {
       new Array(argCount.primitiveValue + tempCount.primitiveValue),
     );
 
-    context.setVarWithName("argsAndTemps", vArgsAndTemps);
+    context.writeNamedVar("argsAndTemps", vArgsAndTemps);
 
     this.initializeLocalContextForClosureLiterals(closure, context);
 
@@ -233,7 +230,7 @@ export class VirtualMachine {
   }
 
   createBlockContext(blockClosure: VirtualObject) {
-    const localContext = blockClosure.readVarWithName(
+    const localContext = blockClosure.readNamedVar(
       "localContext",
       runtimeTypeNotNil,
     );
@@ -242,15 +239,12 @@ export class VirtualMachine {
       Error,
       "Expected block closure to refer to the context of another closure",
     );
-    const receiver = localContext.readVarWithName(
-      "receiver",
-      runtimeTypeNotNil,
-    );
+    const receiver = localContext.readNamedVar("receiver", runtimeTypeNotNil);
     const blockContext = this.createObject("BlockContext");
 
     this.initializeContext(blockContext, receiver, blockClosure);
 
-    blockContext.setVarWithName("localContext", localContext);
+    blockContext.writeNamedVar("localContext", localContext);
 
     this.initializeLocalContextForClosureLiterals(blockClosure, localContext);
 
@@ -262,28 +256,28 @@ export class VirtualMachine {
     receiver: VirtualObject,
     closure: VirtualObject,
   ) {
-    context.setVarWithName("evalStack", this.createObject("Array", []));
-    context.setVarWithName("receiver", receiver);
-    context.setVarWithName("closure", closure);
-    context.setVarWithName("instructionByteIndex", this.asLiteral(0));
+    context.writeNamedVar("evalStack", this.createObject("Array", []));
+    context.writeNamedVar("receiver", receiver);
+    context.writeNamedVar("closure", closure);
+    context.writeNamedVar("instructionByteIndex", this.asLiteral(0));
   }
 
   initializeLocalContextForClosureLiterals(
     closure: VirtualObject,
     context: VirtualObject,
   ) {
-    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
+    const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
     for (let i = 0; i <= literals.maxIndex; i++) {
-      const literal = literals.readIndex(i);
+      const literal = literals.readIndexedVar(i);
       if (literal.hasVarWithName("localContext")) {
-        literal.setVarWithName("localContext", context);
+        literal.writeNamedVar("localContext", context);
       }
     }
   }
 
   // (TODO:organize) move to ./contexts
   populateArgs(context: VirtualObject, closure: VirtualObject) {
-    const argCount = closure.readVarWithName(
+    const argCount = closure.readNamedVar(
       "argCount",
       runtimeTypePositiveNumber,
     );
@@ -291,12 +285,12 @@ export class VirtualMachine {
       return;
     }
 
-    const args = context.readVarWithName("argsAndTemps", runtimeTypeNotNil);
+    const args = context.readNamedVar("argsAndTemps", runtimeTypeNotNil);
 
     const { evalStack } = this;
 
     for (let index = 0; index < argCount.primitiveValue; index++) {
-      args.setIndex(index, evalStack.stackPop()!);
+      args.writeIndexedVar(index, evalStack.stackPop()!);
     }
   }
 
@@ -312,7 +306,7 @@ export class VirtualMachine {
   }
 
   jumpToStartOfClosureInstructions(closure: VirtualObject) {
-    const closureId = closure.readVarWithName(
+    const closureId = closure.readNamedVar(
       "closureId",
       runtimeTypePositiveNumber,
     ).primitiveValue;

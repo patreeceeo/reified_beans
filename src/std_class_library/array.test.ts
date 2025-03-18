@@ -10,7 +10,7 @@ describe("Standard Class Library", () => {
       const closure = vm.createClosure();
       const receiver = vm.asLiteral(undefined);
       const context = vm.invokeAsMethod(receiver, closure);
-      const evalStack = context.readVarWithName("evalStack", runtimeTypeNotNil);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       evalStack.stackPush(vm.asLiteral(2));
       evalStack.stackPush(array);
