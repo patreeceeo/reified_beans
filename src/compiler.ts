@@ -184,7 +184,7 @@ export class ClassCompiler {
           ...receiverInstructions,
           instruction.sendLiteralSelectorExtended(
             literals[expr.message],
-            expr.args ? expr.args.length : 0,
+            sendArgs.length,
           ),
         ];
       }
