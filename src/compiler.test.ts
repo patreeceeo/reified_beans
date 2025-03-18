@@ -21,8 +21,8 @@ const classDescription: ClassDescription = {
 interface CompileExpressionTestCase {
   given: {
     expression: Expression;
-    args: Identifier[];
-    temps: Identifier[];
+    args?: Identifier[];
+    temps?: Identifier[];
   };
   expect:
     | {
@@ -41,7 +41,6 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         value: "y",
       },
       args: [{ id: "x" }, { id: "y" }],
-      temps: [],
     },
     expect: {
       instructions: [instruction.push(ContextValue.TempVar, 1)],
@@ -53,8 +52,6 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         type: "arg",
         value: "y",
       },
-      args: [],
-      temps: [],
     },
     expect: {
       throw: true,
@@ -66,7 +63,6 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         type: "temp",
         value: "y",
       },
-      args: [],
       temps: [{ id: "x" }, { id: "y" }],
     },
     expect: {
@@ -79,8 +75,6 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         type: "temp",
         value: "y",
       },
-      args: [],
-      temps: [],
     },
     expect: {
       throw: true,
@@ -95,20 +89,18 @@ describe("compiler", () => {
         const vm = new VirtualMachine();
         const compiler = new ClassCompiler(classDescription, vm);
         const { given, expect: expectData } = testCase;
+        const args = given.args ?? [];
+        const temps = given.temps ?? [];
 
         if ("throw" in expectData) {
           expect(() => {
-            compiler.compileExpression(
-              given.expression,
-              given.args,
-              given.temps,
-            );
+            compiler.compileExpression(given.expression, args, temps);
           }).toThrow();
         } else {
           const result = compiler.compileExpression(
             given.expression,
-            given.args,
-            given.temps,
+            args,
+            temps,
           );
           expect(result).toEqual(expectData.instructions);
         }
