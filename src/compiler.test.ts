@@ -23,6 +23,7 @@ interface CompileExpressionTestCase {
     expression: Expression;
     args?: Identifier[];
     temps?: Identifier[];
+    literals?: Dict<number>;
   };
   expect:
     | {
@@ -80,6 +81,23 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       throw: true,
     },
   },
+  "send success (no args)": {
+    given: {
+      expression: {
+        type: "send",
+        receiver: { type: "arg", value: "x" },
+        message: "foo",
+      },
+      args: [{ id: "x" }],
+      literals: { foo: 23 },
+    },
+    expect: {
+      instructions: [
+        instruction.push(ContextValue.TempVar, 0),
+        instruction.sendLiteralSelectorExtended(23, 0),
+      ],
+    },
+  },
 };
 
 describe("compiler", () => {
@@ -91,16 +109,18 @@ describe("compiler", () => {
         const { given, expect: expectData } = testCase;
         const args = given.args ?? [];
         const temps = given.temps ?? [];
+        const literals = given.literals ?? {};
 
         if ("throw" in expectData) {
           expect(() => {
-            compiler.compileExpression(given.expression, args, temps);
+            compiler.compileExpression(given.expression, args, temps, literals);
           }).toThrow();
         } else {
           const result = compiler.compileExpression(
             given.expression,
             args,
             temps,
+            literals,
           );
           expect(result).toEqual(expectData.instructions);
         }

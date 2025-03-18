@@ -6,6 +6,7 @@ import { VirtualObject, type AnyLiteralJsValue } from "./virtual_objects";
 import { instruction, type Instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import { BindingError, invariant, raise } from "./errors";
+import type { Dict } from "./generics";
 
 const exampleProgramClosure: ClosureDescription = {
   args: [{ id: "block" }, { id: "list" }],
@@ -122,6 +123,7 @@ export type Expression =
 export interface ClosureDescription {
   args?: Identifier[];
   temps?: Identifier[];
+  literals?: AnyLiteralJsValue[];
   body?: Expression[];
 }
 
@@ -138,30 +140,12 @@ export class ClassCompiler {
     readonly description: ClassDescription,
     readonly vm: VirtualMachine,
   ) {}
-  // compile() {
-  //   const { description, vm } = this;
-  //   const superClass = vm.globalContext.at(superClassName);
-  //   const ivars = [...superClass.ivars, ...description.ivars];
-  //   const vClass = new VirtualObject(vm, "Class", ivars);
-  //   for (const [methodName, closureDescription] of Object.entries(
-  //     description.methods,
-  //   )) {
-  //     const closure = this.compileClosure(closureDescription);
-  //     vClass.methodDict[methodName] = closure;
-  //   }
-  // }
-
-  // compileClosure(description: ClosureDescription) {
-  //   const instructions = [] as Instruction<any>[];
-  //   for (const expr of description.body) {
-  //     instructions.push(this.compileExpression(expr, description));
-  //   }
-  // }
 
   compileExpression(
     expr: Expression,
     args: Identifier[],
     temps: Identifier[],
+    literals: Dict<number>,
   ): Instruction<any>[] {
     switch (expr.type) {
       case "arg": {
@@ -184,7 +168,42 @@ export class ClassCompiler {
         );
         return [instruction.push(ContextValue.TempVar, tempIndex)];
       }
+      case "send": {
+        const receiverInstructions = this.compileExpression(
+          expr.receiver,
+          args,
+          temps,
+          literals,
+        );
+        return [
+          ...receiverInstructions,
+          instruction.sendLiteralSelectorExtended(
+            literals[expr.message],
+            expr.args ? expr.args.length : 0,
+          ),
+        ];
+      }
     }
     raise(Error, `Unknown expression type ${expr.type}`);
   }
+
+  // compile() {
+  //   const { description, vm } = this;
+  //   const superClass = vm.globalContext.at(superClassName);
+  //   const ivars = [...superClass.ivars, ...description.ivars];
+  //   const vClass = new VirtualObject(vm, "Class", ivars);
+  //   for (const [methodName, closureDescription] of Object.entries(
+  //     description.methods,
+  //   )) {
+  //     const closure = this.compileClosure(closureDescription);
+  //     vClass.methodDict[methodName] = closure;
+  //   }
+  // }
+
+  // compileClosure(description: ClosureDescription) {
+  //   const instructions = [] as Instruction<any>[];
+  //   for (const expr of description.body) {
+  //     instructions.push(this.compileExpression(expr, description));
+  //   }
+  // }
 }
