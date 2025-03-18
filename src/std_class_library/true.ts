@@ -5,7 +5,6 @@ import { type CompiledClass } from "src/virtual_objects";
 
 export const dTrue_ifTrue = {
   argCount: 1,
-  literals: ["value"],
   instructions: [
     // The following instructions send the #value message to the first argument of this method,
     // which is expected to be a block closure.
@@ -16,7 +15,7 @@ export const dTrue_ifTrue = {
     // push the block (first arg) onto the evaluation stack
     instruction.push(ContextValue.TempVar, 0),
     // actually send the message
-    instruction.sendLiteralSelectorExtended(0, 1),
+    instruction.sendSelector("value", 1),
   ],
 };
 

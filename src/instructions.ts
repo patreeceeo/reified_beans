@@ -99,16 +99,14 @@ class PopAndStoreInstruction extends Instruction<[ContextVariable, number]> {
   }
 }
 
-class SendLiteralSelectorExtendedInstruction extends Instruction<
-  [number, number]
-> {
-  type = "sendLiteralSelectorExtended" as const;
+class SendSelectorInstruction extends Instruction<[string, number]> {
+  type = "sendSelector" as const;
   explain() {
-    const [selectorIndex, argumentCount] = this.args;
-    return `Send literal selector ${selectorIndex} with ${argumentCount} arguments`;
+    const [selector, argumentCount] = this.args;
+    return `Send #${selector} with ${argumentCount} arguments`;
   }
   do(vm: VirtualMachine) {
-    const [selectorIndex, numArgs] = this.args;
+    const [selector, numArgs] = this.args;
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
     const initialStackDepth = vm.evalStack.stackDepth;
@@ -118,14 +116,7 @@ class SendLiteralSelectorExtendedInstruction extends Instruction<
       "evaluation",
     );
 
-    const closure = context.readVarWithName("closure", runtimeTypeNotNil);
-    // (TODO:optimize) add a global selector table to the VM
-    const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
-    const { primitiveValue } = literals.readIndex(
-      selectorIndex,
-      runtimeTypeString,
-    );
-    vm.send(primitiveValue);
+    vm.send(selector);
   }
 }
 
@@ -280,19 +271,16 @@ export const instruction = {
   },
 
   /**
-   * Send a message using a literal selector with the given number of arguments.
+   * Send a message using a selector with the given number of arguments.
    * The receiver is taken off the stack, followed by the arguments.
    * @param selector The index of the literal selector found in the method's literal array
    * @param numArgs The number of arguments to the message
    */
-  sendLiteralSelectorExtended(
-    selectorIndex: number,
+  sendSelector(
+    selector: string,
     argumentCount: number,
-  ): Instruction<[number, number]> {
-    return new SendLiteralSelectorExtendedInstruction([
-      selectorIndex,
-      argumentCount,
-    ]);
+  ): Instruction<[string, number]> {
+    return new SendSelectorInstruction([selector, argumentCount]);
   },
 
   /**

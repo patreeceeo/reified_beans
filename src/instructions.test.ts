@@ -226,22 +226,16 @@ const instructionTests: Record<
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  sendLiteralSelectorExtended: (inst) => {
-    const [selectorId] = inst.args;
-    const testSelectors = ["+", "-"];
+  sendSelector: (inst) => {
+    const [selector] = inst.args;
 
     function createVM() {
       const vm = new VirtualMachine();
       const closure = vm.createClosure({
         tempCount: 4,
-        literals: [0, 0],
       });
       vm.invokeAsMethod(vm.asLiteral(undefined), closure);
 
-      const literals = closure.readVarWithName("literals", runtimeTypeNotNil);
-      for (const [index, selector] of testSelectors.entries()) {
-        literals.setIndex(index, vm.asLiteral(selector));
-      }
       return vm;
     }
 
@@ -256,7 +250,7 @@ const instructionTests: Record<
       const result = vm.evalStack.stackTop!;
       expect(typeof result.primitiveValue).toBe("number");
       const primativeResult = result.primitiveValue as number;
-      switch (testSelectors[selectorId]) {
+      switch (selector) {
         case "+":
           expect(primativeResult).toBe(5);
           break;
@@ -572,8 +566,8 @@ describe("Instructions", () => {
   testInstruction(instruction.store(ContextVariable.TempVar, 3));
   testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
   // (TODO:testing) test a non-primitive method
-  testInstruction(instruction.sendLiteralSelectorExtended(0, 1));
-  testInstruction(instruction.sendLiteralSelectorExtended(1, 1));
+  testInstruction(instruction.sendSelector("+", 1));
+  testInstruction(instruction.sendSelector("-", 1));
   testInstruction(instruction.pop());
   testInstruction(instruction.duplicate());
   testInstruction(instruction.jump(5));

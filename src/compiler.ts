@@ -178,20 +178,11 @@ export class ClassCompiler {
         const sendArgsInstructions = sendArgs.flatMap((arg) =>
           this.compileExpression(arg, args, temps, literals),
         );
-        const literalIndex = literals.get(expr.message);
-        invariant(
-          literalIndex !== undefined,
-          Error,
-          `Unknown message ${expr.message}`,
-        );
 
         return [
           ...sendArgsInstructions,
           ...receiverInstructions,
-          instruction.sendLiteralSelectorExtended(
-            literalIndex,
-            sendArgs.length,
-          ),
+          instruction.sendSelector(expr.message, sendArgs.length),
         ];
       }
       case "literal_js": {

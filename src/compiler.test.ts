@@ -90,12 +90,11 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         message: "foo",
       },
       args: [{ id: "x" }],
-      literals: new Map([["foo", 23]]),
     },
     expect: {
       instructions: [
         instruction.push(ContextValue.TempVar, 0),
-        instruction.sendLiteralSelectorExtended(23, 0),
+        instruction.sendSelector("foo", 0),
       ],
     },
   },
@@ -111,29 +110,14 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
         ],
       },
       args: [{ id: "x" }, { id: "y" }],
-      literals: new Map([["foo", 23]]),
     },
     expect: {
       instructions: [
         instruction.push(ContextValue.TempVar, 1),
         instruction.push(ContextValue.TempVar, 0),
         instruction.push(ContextValue.TempVar, 0),
-        instruction.sendLiteralSelectorExtended(23, 2),
+        instruction.sendSelector("foo", 2),
       ],
-    },
-  },
-  "send fail": {
-    given: {
-      expression: {
-        type: "send",
-        receiver: { type: "arg", value: "x" },
-        message: "foo",
-      },
-      args: [{ id: "x" }],
-      // "foo" is not in literals
-    },
-    expect: {
-      throw: true,
     },
   },
   "JS literal (number)": {
