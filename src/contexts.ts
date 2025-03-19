@@ -63,8 +63,8 @@ export function loadContextValue(
     case ContextValue.TempVar:
       validateTempVarOffset(offset, context);
       return context
-        .readVarWithName("argsAndTemps", runtimeTypeNotNil)
-        .readIndex(offset);
+        .readNamedVar("argsAndTemps", runtimeTypeNotNil)
+        .readIndexedVar(offset);
     case ContextValue.LiteralConst:
       return readLiteral(context, offset);
     case ContextVariable.LiteralVar:
@@ -75,7 +75,7 @@ export function loadContextValue(
 }
 
 function handleReceiverVar(context: VirtualObject, offset: number) {
-  return context.readVarWithName("receiver", runtimeTypeNotNil).readVar(offset);
+  return context.readNamedVar("receiver", runtimeTypeNotNil).readVar(offset);
 }
 
 function readLiteral<PrimitiveType>(
@@ -84,9 +84,9 @@ function readLiteral<PrimitiveType>(
   expectedType: RuntimeType<PrimitiveType> = runtimeTypeNotNil,
 ) {
   return context
-    .readVarWithName("closure")
-    .readVarWithName("literals", runtimeTypeNotNil)
-    .readIndex(offset, expectedType);
+    .readNamedVar("closure")
+    .readNamedVar("literals", runtimeTypeNotNil)
+    .readIndexedVar(offset, expectedType);
 }
 
 function handleLiteralVar(
@@ -100,12 +100,12 @@ function handleLiteralVar(
 }
 
 function validateTempVarOffset(offset: number, context: VirtualObject): void {
-  const closure = context.readVarWithName("closure", runtimeTypeNotNil);
-  const argCount = closure.readVarWithName(
+  const closure = context.readNamedVar("closure", runtimeTypeNotNil);
+  const argCount = closure.readNamedVar(
     "argCount",
     runtimeTypePositiveNumber,
   ).primitiveValue;
-  const tempCount = closure.readVarWithName(
+  const tempCount = closure.readNamedVar(
     "tempCount",
     runtimeTypePositiveNumber,
   ).primitiveValue;
@@ -131,15 +131,15 @@ export function storeContextValue(
   switch (target) {
     case ContextVariable.ReceiverVar: {
       context
-        .readVarWithName("receiver", runtimeTypeNotNil)
+        .readNamedVar("receiver", runtimeTypeNotNil)
         .setVar(offset, vObject);
       return;
     }
     case ContextVariable.TempVar: {
       validateTempVarOffset(offset, context);
       context
-        .readVarWithName("argsAndTemps", runtimeTypeNotNil)
-        .setIndex(offset, vObject);
+        .readNamedVar("argsAndTemps", runtimeTypeNotNil)
+        .writeIndexedVar(offset, vObject);
       return;
     }
     case ContextVariable.LiteralVar:
