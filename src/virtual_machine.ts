@@ -206,21 +206,10 @@ export class VirtualMachine {
 
   createMethodContext(receiver: VirtualObject, closure: VirtualObject) {
     const context = this.createObject("MethodContext");
-    const argCount = closure.readNamedVar(
-      "argCount",
-      runtimeTypePositiveNumber,
-    );
-    const tempCount = closure.readNamedVar(
-      "tempCount",
-      runtimeTypePositiveNumber,
-    );
 
     this.initializeContext(context, receiver, closure);
 
-    const vArgsAndTemps = this.createObject(
-      "Array",
-      new Array(argCount.primitiveValue + tempCount.primitiveValue),
-    );
+    const vArgsAndTemps = this.createObject("Array");
 
     context.writeNamedVar("argsAndTemps", vArgsAndTemps);
 
