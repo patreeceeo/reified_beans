@@ -16,6 +16,7 @@ export function ScopeItemDropdownExtension() {
         const options = [] as Array<[string, string]>;
         analyzer.analyze();
         const vars = analyzer.getVariablesForBlockOrWorkspace(block.id);
+        options.push(["<none>", ""]);
         for (const name of vars) {
           options.push([name, name]);
         }

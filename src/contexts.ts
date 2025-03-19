@@ -27,6 +27,10 @@ export class GlobalContext {
   put(key: string, value: VirtualObject) {
     this.dict[key] = value;
   }
+
+  get keys() {
+    return Object.keys(this.dict);
+  }
 }
 
 /*

@@ -1,8 +1,6 @@
 ---
-import BlocklyWorkspace from 'src/components/BlocklyWorkspace.astro';
-import MachineXRay from 'src/components/MachineXRay.astro';
 import Layout from 'src/layouts/Layout.astro';
-import Split from 'src/layouts/Split.astro';
+import { Workspace } from 'src/components/Workspace.tsx';
 
 /*
 Smalltalk is a vision of the computer as a medium of self expression. ... A humanistic vision of the computer as something everyone could use and benefit from. If you are going to have a medium for self expression, programability is key because unless you can actually make the system behave as you want you are a slave to what's on the machine. So it's really vital, and so language comes to the for because it's through language that you express yourself to the machine.
@@ -10,7 +8,6 @@ Smalltalk is a vision of the computer as a medium of self expression. ... A huma
 The thing that is most radical, I think, about the Smalltalk Vision, and the thing which much of the instustry misses and has left behind, except maybe at the GUI level, is that the [Smalltalk] language design follows from a human centric design; a vision of, a humanist vision of what we might do to make peoples lives better, more enjoyable, more productive; and from that starting point a very very radical and original language, and a very very radical and original set of implementation technologies came along."
 - Elliot Miranda, Cincom
 */
-
 /*
 
 Workflow:
@@ -34,6 +31,7 @@ Workflow:
   - Create a collection of objects
   - Send it a message that takes a selector as an argument
   - Responds with the objects that respond to that message
+*/
 
 
 
@@ -48,86 +46,5 @@ Workflow:
 
 ---
 <Layout title="Editor">
-  <Split id="pageContainer">
-    <section slot="1">
-      <BlocklyWorkspace/>
-    </section>
-    <section slot="2" id="output">
-      <MachineXRay/>
-    </section>
-  </Split>
+  <Workspace client:load />
 </Layout>
-<style>
-  #pageContainer {
-    height: 100vh;
-  }
-
-  #output {
-    background-color: lightskyblue;
-  }
-</style>
-<script>
-  import type {SplitLayout} from '../layouts/Split';
-  import {AnimationFrameStream} from '../streams';
-  import type {BlocklyWorkspace} from '../components/BlocklyWorkspace';
-  import {MachineXRay} from 'src/components/MachineXRay';
-
-  const blocklyWorkspace = document.querySelector('blockly-workspace') as BlocklyWorkspace;
-  const split = document.getElementById('pageContainer') as SplitLayout;
-  const machineXRay = MachineXRay.findElement();
-  const animationFrame = new AnimationFrameStream(20);
-  let windowWasResized = true;
-  let needRender = true;
-
-  window.addEventListener('resize', () => {
-    windowWasResized = true;
-  });
-
-  const frameHandlers = [
-    () => {
-      if(split.changed) {
-        resizeWorkspace();
-        split.changed = false;
-      }
-    },
-    () => {
-      if(windowWasResized) {
-        resizeWorkspace();
-        windowWasResized = false;
-      }
-    },
-    () => {
-      if(machineXRay.isConnected && needRender) {
-        machineXRay.render();
-        needRender = false;
-      }
-    },
-    () => {
-      if(blocklyWorkspace.hasMeaningfulChanges) {
-        useGeneratedCode();
-        blocklyWorkspace.hasMeaningfulChanges = false;
-      }
-    },
-  ];
-
-  for(const handler of frameHandlers) {
-    animationFrame.subscribe(handler);
-  }
-
-  setTimeout(() => animationFrame.start(), 500);
-
-  function resizeWorkspace() {
-    blocklyWorkspace.adjustSize();
-  };
-
-  function useGeneratedCode() {
-    const machine = blocklyWorkspace.compileWorkspace();
-    try {
-        machine.run();
-    } catch (e) {
-      console.error(e);
-    }
-    machineXRay.machine = machine;
-    needRender = true;
-  }
-</script>
