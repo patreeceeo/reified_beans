@@ -60,9 +60,9 @@ export function loadContextValue(
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (value) {
     case ContextVariable.ReceiverVar:
-      return handleReceiverVar(context, offset);
+      return getVarFromContextReceiver(context, offset);
     case ContextValue.ReceiverVar:
-      return handleReceiverVar(context, offset);
+      return getVarFromContextReceiver(context, offset);
     case ContextVariable.TempVar:
     case ContextValue.TempVar:
       validateTempVarOffset(offset, context);
@@ -78,7 +78,10 @@ export function loadContextValue(
   }
 }
 
-function handleReceiverVar(context: VirtualObject, offset: number) {
+export function getVarFromContextReceiver(
+  context: VirtualObject,
+  offset: number,
+) {
   return context.readNamedVar("receiver", runtimeTypeNotNil).readVar(offset);
 }
 

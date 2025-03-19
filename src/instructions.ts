@@ -1,6 +1,7 @@
 import {
   ContextValue,
   ContextVariable,
+  getVarFromContextReceiver,
   loadContextValue,
   storeContextValue,
 } from "./contexts";
@@ -69,6 +70,19 @@ class PushImmediateInstruction extends Instruction<[AnyPrimitiveJsValue]> {
   }
   do(vm: VirtualMachine) {
     vm.evalStack.stackPush(vm.asLiteral(this.args[0]));
+  }
+}
+
+class PushReceiverVariableInstruction extends Instruction<[number]> {
+  type = "pushReceiverVariable" as const;
+  explain() {
+    return `Push receiver variable onto the evaluation stack`;
+  }
+  do(vm: VirtualMachine) {
+    const [offset] = this.args;
+    const context = vm.contextStack.peek();
+    invariant(context, StackUnderflowError, "context");
+    return getVarFromContextReceiver(context, offset);
   }
 }
 
@@ -226,6 +240,11 @@ export const instruction = {
 
   /**
    * Push an object onto the eval stack
+   *
+   * TODO deprecate in favor of instructions that push objects from specific sources?
+   * The motivation would be to allow instructions to use object variable names directly instead of using an index.
+   * Then the instruction could be more explicit about what it's doing and the virtual object implementation could be simplified.
+   *
    * @param source The source of the object to push
    * @param offset The offset from the source
    * @see ContextValue
@@ -247,6 +266,10 @@ export const instruction = {
     value: AnyPrimitiveJsValue,
   ): Instruction<[AnyPrimitiveJsValue]> {
     return new PushImmediateInstruction([value]);
+  },
+
+  pushReceiverVariable(offset: number): Instruction<[number]> {
+    return new PushReceiverVariableInstruction([offset]);
   },
 
   /**

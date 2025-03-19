@@ -127,6 +127,31 @@ const instructionTests: Record<
       expect(() => inst.do(vm)).toThrow();
     });
   },
+  pushReceiverVariable: (inst) => {
+    const [offset] = inst.args;
+
+    test("Do it successfully", () => {
+      const vm = new VirtualMachine();
+      const closure = vm.createClosure({
+        tempCount: 4,
+      });
+      vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+      const receiver = vm.createObject("TestObject");
+      const context = vm.invokeAsMethod(receiver, closure);
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
+
+      receiver.setVar(2, vm.asLiteral(true));
+
+      inst.do(vm);
+
+      expect(evalStack.stackTop).toBe(receiver.readVar(offset));
+    });
+
+    test("Fail if the contextStack is empty", () => {
+      const vm = new VirtualMachine();
+      expect(() => inst.do(vm)).toThrow();
+    });
+  },
   store: (inst) => {
     const [target, offset] = inst.args;
     const vm = new VirtualMachine();
