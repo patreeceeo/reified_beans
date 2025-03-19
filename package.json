@@ -19,7 +19,7 @@
     "lint-staged": "^15.4.2",
     "prettier": "3.4.2",
     "typescript": "^5.7.2",
-    "vitest": "^3.0.4"
+    "vitest": "^3.0.9"
   },
   "dependencies": {
     "@astrojs/react": "^4.2.1",
