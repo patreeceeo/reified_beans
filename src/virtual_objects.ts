@@ -1,5 +1,5 @@
 import type { CompiledClosureDescription } from "./closures";
-import { BindingError, invariant, raise, RangeError } from "./errors";
+import { invariant, raise } from "./errors";
 import { Dict } from "./generics";
 import {
   runtimeTypeAnyJsLiteral,
@@ -54,17 +54,15 @@ export class VirtualObject {
 
   static createTrue(vm: VirtualMachine) {
     const classKey = this.getLiteralClassKey(true);
-    const vo = VirtualObject.createObject(vm, classKey);
+    const vo = VirtualObject.createObject(vm, classKey, true);
     vo.isTrue = true;
-    vo._primitiveValue = true;
     return vo;
   }
 
   static createFalse(vm: VirtualMachine) {
     const classKey = this.getLiteralClassKey(false);
-    const vo = VirtualObject.createObject(vm, classKey);
+    const vo = VirtualObject.createObject(vm, classKey, false);
     vo.isFalse = true;
-    vo._primitiveValue = false;
     return vo;
   }
 
