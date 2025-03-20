@@ -128,7 +128,7 @@ const instructionTests: Record<
     });
   },
   pushReceiverVariable: (inst) => {
-    const [offset] = inst.args;
+    const [varName] = inst.args;
 
     test("Do it successfully", () => {
       const vm = new VirtualMachine();
@@ -140,11 +140,11 @@ const instructionTests: Record<
       const context = vm.invokeAsMethod(receiver, closure);
       const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
-      receiver.setVar(2, vm.asLiteral(true));
+      receiver.writeNamedVar(varName, vm.asLiteral(true));
 
       inst.do(vm);
 
-      expect(evalStack.stackTop).toBe(receiver.readVar(offset));
+      expect(evalStack.stackTop).toBe(receiver.readNamedVar(varName));
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -576,6 +576,7 @@ describe("Instructions", () => {
   testInstruction(instruction.push(ContextValue.LiteralConst, 3));
   testInstruction(instruction.push(ContextValue.LiteralVar, 3));
   testInstruction(instruction.pushImmediate("foo"));
+  testInstruction(instruction.pushReceiverVariable("baz"));
   testInstruction(instruction.store(ContextVariable.ReceiverVar, 2));
   testInstruction(instruction.store(ContextVariable.LiteralVar, 3));
   testInstruction(instruction.store(ContextVariable.TempVar, 3));

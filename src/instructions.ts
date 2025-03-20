@@ -73,16 +73,16 @@ class PushImmediateInstruction extends Instruction<[AnyPrimitiveJsValue]> {
   }
 }
 
-class PushReceiverVariableInstruction extends Instruction<[number]> {
+class PushReceiverVariableInstruction extends Instruction<[string]> {
   type = "pushReceiverVariable" as const;
   explain() {
     return `Push receiver variable onto the evaluation stack`;
   }
   do(vm: VirtualMachine) {
-    const [offset] = this.args;
+    const [varName] = this.args;
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    return getVarFromContextReceiver(context, offset);
+    return getVarFromContextReceiver(context, varName);
   }
 }
 
@@ -268,8 +268,8 @@ export const instruction = {
     return new PushImmediateInstruction([value]);
   },
 
-  pushReceiverVariable(offset: number): Instruction<[number]> {
-    return new PushReceiverVariableInstruction([offset]);
+  pushReceiverVariable(varName: string) {
+    return new PushReceiverVariableInstruction([varName]);
   },
 
   /**
