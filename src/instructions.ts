@@ -230,7 +230,7 @@ export const instruction = {
    * @param value The special value to Push
    * @see SpecialPushValue
    */
-  pushSpecialValue(value: SpecialPushValue): Instruction<[SpecialPushValue]> {
+  pushSpecialValue(value: SpecialPushValue) {
     return new PushSpecialValueInstruction([value]);
   },
 
@@ -239,9 +239,7 @@ export const instruction = {
    * @param value The special value to return
    * @see SpecialReturnValue
    */
-  returnSpecialValue(
-    value: SpecialReturnValue,
-  ): Instruction<[SpecialReturnValue]> {
+  returnSpecialValue(value: SpecialReturnValue) {
     return new ReturnSpecialValueInstruction([value]);
   },
 
@@ -256,10 +254,7 @@ export const instruction = {
    * @param offset The offset from the source
    * @see ContextValue
    */
-  push(
-    source: ContextValue,
-    offset: number,
-  ): Instruction<[ContextValue, number]> {
+  push(source: ContextValue, offset: number) {
     return new PushInstruction([source, offset]);
   },
 
@@ -269,9 +264,7 @@ export const instruction = {
    * This is an optimization both in terms of runtime and developer cycles. It saves the runtime from having to pull a number or string out of the literals array and it saves the developer from having to make sure the desired string or number is in the literals array.
    * @param value The value to push
    */
-  pushImmediate(
-    value: AnyPrimitiveJsValue,
-  ): Instruction<[AnyPrimitiveJsValue]> {
+  pushImmediate(value: AnyPrimitiveJsValue) {
     return new PushImmediateInstruction([value]);
   },
 
@@ -303,31 +296,28 @@ export const instruction = {
    * @param selector The index of the literal selector found in the method's literal array
    * @param numArgs The number of arguments to the message
    */
-  sendSelector(
-    selector: string,
-    argumentCount: number,
-  ): Instruction<[string, number]> {
+  sendSelector(selector: string, argumentCount: number) {
     return new SendSelectorInstruction([selector, argumentCount]);
   },
 
   /**
    * Pop the object from the top of the Stack
    */
-  pop(): Instruction<[]> {
+  pop() {
     return new PopInstruction([]);
   },
 
   /**
    * Duplicate the object on the top of the Stack
    */
-  duplicate(): Instruction<[]> {
+  duplicate() {
     return new DuplicateInstruction([]);
   },
 
   /**
    * Jump the given number of bytes, unconditionally.
    */
-  jump(byteOffset: number): Instruction<[number]> {
+  jump(byteOffset: number) {
     return new JumpInstruction([byteOffset]);
   },
 
@@ -336,7 +326,7 @@ export const instruction = {
    * Otherwise, continue to the next instruction.
    * @param offset The number of instructions to jump, can be negative.
    */
-  popAndJumpOnTrue(byteOffset: number): Instruction<[number]> {
+  popAndJumpOnTrue(byteOffset: number) {
     return new PopAndJumpOnTrueInstruction([byteOffset]);
   },
 
@@ -345,14 +335,14 @@ export const instruction = {
    * Otherwise, continue to the next instruction.
    * @param offset The number of bytes to jump, can be negative.
    */
-  popAndJumpOnFalse(byteOffset: number): Instruction<[number]> {
+  popAndJumpOnFalse(byteOffset: number) {
     return new PopAndJumpOnFalseInstruction([byteOffset]);
   },
 
   /**
    * No operation, does nothing.
    */
-  noop(): Instruction<[]> {
+  noop() {
     return new NoopInstruction([]);
   },
 };
