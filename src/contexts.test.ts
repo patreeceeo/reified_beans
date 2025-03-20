@@ -23,8 +23,8 @@ describe("ContextValue", () => {
     literals.writeIndexedVar(3, vm.asLiteral("Object"));
     argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
 
-    test(ContextValue[ContextValue.TempVar], () => {
-      const result = loadContextValue(ContextValue.TempVar, 3, vm);
+    test(ContextValue[ContextValue.ArgOrTempVar], () => {
+      const result = loadContextValue(ContextValue.ArgOrTempVar, 3, vm);
       expect(result).toBe(argsAndTemps.readIndexedVar(3));
     });
     test(ContextValue[ContextValue.LiteralConst], () => {

@@ -159,7 +159,7 @@ export class ClassCompiler {
           this.description.name,
           String(expr.value),
         );
-        return [instruction.push(ContextValue.TempVar, argIndex)];
+        return [instruction.push(ContextValue.ArgOrTempVar, argIndex)];
       }
       case "temp": {
         const tempIndex = temps.findIndex((arg) => arg.id === expr.value);
@@ -169,7 +169,7 @@ export class ClassCompiler {
           this.description.name,
           String(expr.value),
         );
-        return [instruction.push(ContextValue.TempVar, tempIndex)];
+        return [instruction.push(ContextValue.ArgOrTempVar, tempIndex)];
       }
       case "send": {
         const receiverInstructions = this.compileExpression(

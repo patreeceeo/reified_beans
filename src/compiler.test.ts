@@ -45,7 +45,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       args: [{ id: "x" }, { id: "y" }],
     },
     expect: {
-      instructions: [instruction.push(ContextValue.TempVar, 1)],
+      instructions: [instruction.push(ContextValue.ArgOrTempVar, 1)],
     },
   },
   "arg fail": {
@@ -68,7 +68,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
       temps: [{ id: "x" }, { id: "y" }],
     },
     expect: {
-      instructions: [instruction.push(ContextValue.TempVar, 1)],
+      instructions: [instruction.push(ContextValue.ArgOrTempVar, 1)],
     },
   },
   "temp fail": {
@@ -93,7 +93,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
     },
     expect: {
       instructions: [
-        instruction.push(ContextValue.TempVar, 0),
+        instruction.push(ContextValue.ArgOrTempVar, 0),
         instruction.sendSelector("foo", 0),
       ],
     },
@@ -113,9 +113,9 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
     },
     expect: {
       instructions: [
-        instruction.push(ContextValue.TempVar, 1),
-        instruction.push(ContextValue.TempVar, 0),
-        instruction.push(ContextValue.TempVar, 0),
+        instruction.push(ContextValue.ArgOrTempVar, 1),
+        instruction.push(ContextValue.ArgOrTempVar, 0),
+        instruction.push(ContextValue.ArgOrTempVar, 0),
         instruction.sendSelector("foo", 2),
       ],
     },

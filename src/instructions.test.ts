@@ -612,7 +612,7 @@ function testInstruction<I extends Instruction<any>>(inst: I) {
 describe("Instructions", () => {
   testInstruction(instruction.pushSpecialValue(SpecialPushValue.NegativeOne));
   testInstruction(instruction.returnSpecialValue(SpecialReturnValue.Self));
-  testInstruction(instruction.push(ContextValue.TempVar, 3));
+  testInstruction(instruction.push(ContextValue.ArgOrTempVar, 3));
   testInstruction(instruction.push(ContextValue.LiteralConst, 3));
   testInstruction(instruction.push(ContextValue.LiteralVar, 3));
   testInstruction(instruction.pushImmediate("foo"));

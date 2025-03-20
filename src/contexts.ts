@@ -39,7 +39,7 @@ export class GlobalContext {
  */
 
 export enum ContextValue {
-  TempVar,
+  ArgOrTempVar,
   LiteralVar,
   LiteralConst,
 }
@@ -50,23 +50,20 @@ export enum ContextVariable {
 }
 
 export function loadContextValue(
-  value: ContextValue | ContextVariable,
+  value: ContextValue,
   offset: number,
   vm: VirtualMachine,
 ): VirtualObject {
   const context = vm.contextStack.peek();
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (value) {
-    case ContextVariable.TempVar:
-    case ContextValue.TempVar:
+    case ContextValue.ArgOrTempVar:
       validateTempVarOffset(offset, context);
       return context
         .readNamedVar("argsAndTemps", runtimeTypeNotNil)
         .readIndexedVar(offset);
     case ContextValue.LiteralConst:
       return readLiteral(context, offset);
-    case ContextVariable.LiteralVar:
-      return handleLiteralVar(offset, vm, context);
     case ContextValue.LiteralVar:
       return handleLiteralVar(offset, vm, context);
   }

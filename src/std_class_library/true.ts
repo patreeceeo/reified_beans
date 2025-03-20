@@ -13,7 +13,7 @@ export const dTrue_ifTrue = {
     instruction.pushSpecialValue(SpecialPushValue.Zero),
 
     // push the block (first arg) onto the evaluation stack
-    instruction.push(ContextValue.TempVar, 0),
+    instruction.push(ContextValue.ArgOrTempVar, 0),
     // actually send the message
     instruction.sendSelector("value", 1),
   ],
