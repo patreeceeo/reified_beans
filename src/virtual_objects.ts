@@ -230,28 +230,6 @@ export class VirtualObject {
     return true;
   }
 
-  deepEquals(other: VirtualObject) {
-    if (!this.looseEquals(other)) {
-      return false;
-    }
-
-    const varNames = Object.keys(this.namedVars);
-
-    for (const key of varNames) {
-      const value = this.readNamedVar(key);
-      if (!value.deepEquals(other.readNamedVar(key))) {
-        return false;
-      }
-    }
-    for (let i = 0; i <= this.maxIndex; i++) {
-      const value = this.readIndexedVar(i);
-      if (!value.deepEquals(other.readIndexedVar(i))) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   shapeEquals(other: VirtualObject) {
     if (!this.looseEquals(other)) {
       return false;
