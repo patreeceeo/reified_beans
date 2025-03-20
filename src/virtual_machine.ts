@@ -8,9 +8,11 @@ import { classDescriptions } from "./std_class_library";
 import {
   runtimeTypeNotNil,
   runtimeTypePositiveNumber,
+  runtimeTypeString,
 } from "./runtime_type_checks";
 import type { Instruction } from "./instructions";
 import { getWithDefault } from "../utils";
+import { guid } from "./guid";
 
 export class VirtualMachine {
   globalContext = new GlobalContext();
@@ -24,9 +26,9 @@ export class VirtualMachine {
   internedNumbers = [] as VirtualObject[];
 
   /** Instructions for all closures */
-  instructionsByClosureId: Instruction<any>[][] = [];
+  instructionsByClosureId = Dict<Instruction<any>[]>();
   /** Index of the current closure being executed */
-  currentClosureId = 0;
+  currentClosureId = "";
   /** Index of the next instruction to execute */
   instructionPointer = 0;
 
@@ -177,6 +179,7 @@ export class VirtualMachine {
     });
   }
 
+  /** @deprecated */
   createClosure(description: CompiledClosureDescription = {}): VirtualObject {
     // Since closures are virtual objects but instructions are not, we can't
     // store the instructions in the closure object. Instead, we store them
@@ -190,10 +193,9 @@ export class VirtualMachine {
     const argCount = getWithDefault(description, closureDefaults, "argCount");
     const tempCount = getWithDefault(description, closureDefaults, "tempCount");
 
-    // New closures are added to the end of the instructions array
-    const closureId = this.instructionsByClosureId.length;
+    const closureId = guid();
 
-    this.instructionsByClosureId.push(instructions);
+    this.instructionsByClosureId[closureId] = instructions;
 
     const closure = this.createObject("Closure");
     closure.writeNamedVar("argCount", this.asLiteral(argCount));
@@ -297,7 +299,7 @@ export class VirtualMachine {
   jumpToStartOfClosureInstructions(closure: VirtualObject) {
     const closureId = closure.readNamedVar(
       "closureId",
-      runtimeTypePositiveNumber,
+      runtimeTypeString,
     ).primitiveValue;
     this.currentClosureId = closureId;
     this.instructionPointer = 0;

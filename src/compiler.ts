@@ -10,6 +10,7 @@ import {
 import { instruction, type Instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import { BindingError, invariant, raise } from "./errors";
+import { guid } from "./guid";
 
 const exampleProgramClosure: ClosureDescription = {
   args: [{ id: "block" }, { id: "list" }],
@@ -220,10 +221,27 @@ export class ClassCompiler {
   //   }
   // }
 
-  // compileClosure(description: ClosureDescription) {
-  //   const instructions = [] as Instruction<any>[];
-  //   for (const expr of description.body) {
-  //     instructions.push(this.compileExpression(expr, description));
-  //   }
-  // }
+  compileClosureBody(description: ClosureDescription): Instruction<any>[] {
+    const args = description.args ?? [];
+    const temps = description.temps ?? [];
+    const literals = new Map<AnyLiteralValue, number>();
+
+    const bodyInstructions =
+      description.body?.flatMap((expr) =>
+        this.compileExpression(expr, args, temps, literals),
+      ) ?? [];
+
+    return bodyInstructions;
+  }
+
+  compileClosure(description: ClosureDescription) {
+    const closure = new VirtualObject(this.vm, "Closure");
+
+    const closureId = guid();
+    this.vm.instructionsByClosureId[closureId] =
+      this.compileClosureBody(description);
+    closure.writeNamedVar("closureId", this.vm.asLiteral(closureId));
+
+    return closure;
+  }
 }

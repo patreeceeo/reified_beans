@@ -11,6 +11,7 @@ import { Instruction, instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import type { Dict } from "./generics";
 import type { AnyLiteralJsValue } from "./virtual_objects";
+import { runtimeTypeString } from "./runtime_type_checks";
 
 const classDescription: ClassDescription = {
   name: "ExampleClass",
@@ -214,5 +215,29 @@ describe("compiler", () => {
         }
       });
     }
+  });
+
+  describe("compileClosure", () => {
+    test("simple case", () => {
+      const vm = new VirtualMachine();
+      const compiler = new ClassCompiler(classDescription, vm);
+      const closureDescription: ClosureDescription = {
+        body: [
+          {
+            type: "js_primitive",
+            value: 1,
+          },
+        ],
+      };
+      const result = compiler.compileClosure(closureDescription);
+      const closureId = result.readNamedVar(
+        "closureId",
+        runtimeTypeString,
+      ).primitiveValue;
+
+      expect(vm.instructionsByClosureId[closureId]).toEqual(
+        compiler.compileClosureBody(closureDescription),
+      );
+    });
   });
 });
