@@ -309,8 +309,6 @@ export const instruction = {
   /**
    * Store the object on the top of the stack in the indicated variable in the receiver
    * @param varName The name of the variable in the receiver
-   *
-   * TODO add andPop param
    */
   storeInReceiverVariable(varName: string, andPop = false) {
     return new StoreInReceiverVariableInstruction([varName, andPop]);
