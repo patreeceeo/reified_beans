@@ -197,6 +197,82 @@ export class VirtualObject {
   stackPush(object: VirtualObject) {
     return this.indexedVars.push(object);
   }
+
+  looseEquals(other: VirtualObject) {
+    if (this.classKey !== other.classKey) {
+      return false;
+    }
+
+    if (this.isNil !== other.isNil) {
+      return false;
+    }
+
+    if (this.isTrue !== other.isTrue) {
+      return false;
+    }
+
+    if (this.isFalse !== other.isFalse) {
+      return false;
+    }
+
+    if (this.primitiveValue !== other.primitiveValue) {
+      return false;
+    }
+
+    if (this.namedVarCount !== other.namedVarCount) {
+      return false;
+    }
+
+    if (this.maxIndex !== other.maxIndex) {
+      return false;
+    }
+
+    return true;
+  }
+
+  deepEquals(other: VirtualObject) {
+    if (!this.looseEquals(other)) {
+      return false;
+    }
+
+    const varNames = Object.keys(this.namedVars);
+
+    for (const key of varNames) {
+      const value = this.readNamedVar(key);
+      if (!value.deepEquals(other.readNamedVar(key))) {
+        return false;
+      }
+    }
+    for (let i = 0; i <= this.maxIndex; i++) {
+      const value = this.readIndexedVar(i);
+      if (!value.deepEquals(other.readIndexedVar(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  shapeEquals(other: VirtualObject) {
+    if (!this.looseEquals(other)) {
+      return false;
+    }
+
+    const varNames = Object.keys(this.namedVars);
+
+    for (const key of varNames) {
+      const value = this.readNamedVar(key);
+      if (value.classKey !== other.readNamedVar(key).classKey) {
+        return false;
+      }
+    }
+    for (let i = 0; i <= this.maxIndex; i++) {
+      const value = this.readIndexedVar(i);
+      if (value.classKey !== other.readIndexedVar(i).classKey) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 export interface CompiledClass {
