@@ -37,7 +37,7 @@ const exampleProgramClosure: ClosureDescription = {
       message: "ifTrue:",
       args: [
         {
-          type: "literal_block",
+          type: "complex_literal",
           value: {
             body: [
               {
@@ -112,7 +112,7 @@ interface JsPrimitiveExpression {
 }
 
 interface BlockLiteralExpression {
-  type: "literal_block";
+  type: "complex_literal";
   value: ClosureDescription;
 }
 
@@ -123,10 +123,12 @@ export type Expression =
   | JsPrimitiveExpression
   | BlockLiteralExpression;
 
+export type AnyLiteralValue = AnyLiteralJsValue | ClosureDescription;
+
 export interface ClosureDescription {
   args?: Identifier[];
   temps?: Identifier[];
-  literals?: AnyLiteralJsValue[];
+  literals?: AnyLiteralValue[];
   body?: Expression[];
 }
 
@@ -148,7 +150,7 @@ export class ClassCompiler {
     expr: Expression,
     args: Identifier[],
     temps: Identifier[],
-    literals: Map<AnyLiteralJsValue, number>,
+    literals: Map<AnyLiteralValue, number>,
   ): Instruction<any>[] {
     switch (expr.type) {
       case "arg": {
@@ -192,8 +194,17 @@ export class ClassCompiler {
       case "js_primitive": {
         return [instruction.pushImmediate(expr.value)];
       }
+
+      case "complex_literal": {
+        const offset = literals.get(expr.value);
+        invariant(
+          offset !== undefined,
+          Error,
+          `Literal block has not been added to literals map`,
+        );
+        return [instruction.push(ContextValue.LiteralConst, offset)];
+      }
     }
-    raise(Error, `Unknown expression type ${expr.type}`);
   }
 
   // compile() {

@@ -3,6 +3,7 @@ import { VirtualMachine } from "./virtual_machine";
 import {
   ClassCompiler,
   type ClassDescription,
+  type ClosureDescription,
   type Expression,
   type Identifier,
 } from "./compiler";
@@ -24,7 +25,7 @@ interface CompileExpressionTestCase {
     expression: Expression;
     args?: Identifier[];
     temps?: Identifier[];
-    literals?: Map<AnyLiteralJsValue, number>;
+    literals?: Map<AnyLiteralJsValue | ClosureDescription, number>;
   };
   expect:
     | {
@@ -34,6 +35,15 @@ interface CompileExpressionTestCase {
         throw: true;
       };
 }
+
+const simpleBlockAST: ClosureDescription = {
+  body: [
+    {
+      type: "js_primitive",
+      value: 1,
+    },
+  ],
+};
 
 const compileExpressionTests: Dict<CompileExpressionTestCase> = {
   "arg success": {
@@ -162,6 +172,18 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
     },
     expect: {
       instructions: [instruction.pushImmediate(undefined)],
+    },
+  },
+  "complex literal": {
+    given: {
+      expression: {
+        type: "complex_literal",
+        value: simpleBlockAST,
+      },
+      literals: new Map([[simpleBlockAST, 13]]),
+    },
+    expect: {
+      instructions: [instruction.push(ContextValue.LiteralConst, 13)],
     },
   },
 };
