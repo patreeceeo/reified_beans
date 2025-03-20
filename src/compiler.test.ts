@@ -179,6 +179,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
     given: {
       expression: {
         type: "complex_literal",
+        literalType: "BlockClosure",
         value: simpleBlockAST,
       },
       literals: new Map([[simpleBlockAST, 13]]),
@@ -218,31 +219,41 @@ describe("compiler", () => {
   });
 
   describe("compileClosure", () => {
-    test("simple case", () => {
+    describe("simple case", () => {
       const vm = new VirtualMachine();
       const compiler = new ClassCompiler(classDescription, vm);
+      const body = [
+        {
+          type: "complex_literal",
+          literalType: "BlockClosure",
+          value: simpleBlockAST,
+        },
+        {
+          type: "js_primitive",
+          value: 1,
+        },
+      ] as Expression[];
       const closureDescription: ClosureDescription = {
-        body: [
-          {
-            type: "js_primitive",
-            value: 1,
-          },
-        ],
+        body,
       };
+      const inputLiterals = compiler.computeInputLiterals(body);
       const result = compiler.compileClosure(closureDescription);
       const closureId = result.readNamedVar(
         "closureId",
         runtimeTypeString,
       ).primitiveValue;
 
-      expect(vm.instructionsByClosureId[closureId]).toEqual(
-        compiler.compileClosureBody(
-          closureDescription.body ?? [],
-          [],
-          [],
-          new Map(),
-        ),
-      );
+      test("the virtual machine has the instructions", () => {
+        expect(vm.instructionsByClosureId[closureId]).toEqual(
+          compiler.compileClosureBody(body, [], [], inputLiterals),
+        );
+      });
+
+      test("the closure has the literals", () => {
+        const actual = result.readNamedVar("literals");
+        const expected = compiler.computeLiteralTable(body);
+        expect(actual.shapeEquals(expected)).toBe(true);
+      });
     });
   });
 });

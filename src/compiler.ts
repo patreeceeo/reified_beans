@@ -39,6 +39,7 @@ const exampleProgramClosure: ClosureDescription = {
       args: [
         {
           type: "complex_literal",
+          literalType: "BlockClosure",
           value: {
             body: [
               {
@@ -112,8 +113,9 @@ interface JsPrimitiveExpression {
   value: AnyPrimitiveJsValue;
 }
 
-interface BlockLiteralExpression {
+interface ComplexLiteralExpression {
   type: "complex_literal";
+  literalType: "BlockClosure";
   value: ClosureDescription;
 }
 
@@ -122,14 +124,13 @@ export type Expression =
   | TempExpression
   | ArgExpression
   | JsPrimitiveExpression
-  | BlockLiteralExpression;
+  | ComplexLiteralExpression;
 
 export type AnyLiteralValue = AnyLiteralJsValue | ClosureDescription;
 
 export interface ClosureDescription {
   args?: Identifier[];
   temps?: Identifier[];
-  literals?: AnyLiteralValue[];
   body?: Expression[];
 }
 
@@ -141,6 +142,11 @@ export interface ClassDescription {
   methods: Record<string, ClosureDescription>;
 }
 
+/**
+ * Used to map ASTs for literals to the literal table offset that will be used in the compiled code.
+ */
+type InputLiteralMap = Map<AnyLiteralValue, number>;
+
 export class ClassCompiler {
   constructor(
     readonly description: ClassDescription,
@@ -151,7 +157,7 @@ export class ClassCompiler {
     expr: Expression,
     args: Identifier[],
     temps: Identifier[],
-    literals: Map<AnyLiteralValue, number>,
+    literals: InputLiteralMap,
   ): Instruction<any>[] {
     switch (expr.type) {
       case "arg": {
@@ -239,14 +245,44 @@ export class ClassCompiler {
     const closure = new VirtualObject(this.vm, "Closure");
 
     const closureId = guid();
+
+    const body = description.body ?? [];
+
+    const inputLiterals = this.computeInputLiterals(body);
+    const literalTable = this.computeLiteralTable(body);
+
     this.vm.instructionsByClosureId[closureId] = this.compileClosureBody(
-      description.body ?? [],
+      body,
       description.args ?? [],
       description.temps ?? [],
-      new Map(),
+      inputLiterals,
     );
     closure.writeNamedVar("closureId", this.vm.asLiteral(closureId));
+    closure.writeNamedVar("literals", literalTable);
 
     return closure;
+  }
+
+  computeInputLiterals(exprs: Expression[]): Map<AnyLiteralValue, number> {
+    const literals = new Map<AnyLiteralValue, number>();
+    for (const expr of exprs) {
+      if (expr.type === "complex_literal") {
+        invariant(!literals.has(expr.value), Error, "Duplicate literal");
+        literals.set(expr.value, literals.size);
+      }
+    }
+    return literals;
+  }
+
+  computeLiteralTable(exprs: Expression[]): VirtualObject {
+    const literals = new VirtualObject(this.vm, "Array");
+    for (const expr of exprs) {
+      if (expr.type === "complex_literal") {
+        if (expr.literalType === "BlockClosure") {
+          literals.stackPush(this.compileClosure(expr.value));
+        }
+      }
+    }
+    return literals;
   }
 }
