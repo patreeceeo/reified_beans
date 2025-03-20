@@ -19,7 +19,8 @@ export class VirtualObject {
   isFalse = false;
 
   private vClassCached?: VirtualObject;
-  private vars: VirtualObject[] = [];
+  private namedVars = Dict<VirtualObject>();
+  private indexedVars: VirtualObject[] = [];
   private _primitiveValue: AnyPrimitiveJsValue = undefined;
 
   get vClass() {
@@ -37,12 +38,8 @@ export class VirtualObject {
     return this.vClass.ivars.length;
   }
 
-  get varCount() {
-    return this.vars.length;
-  }
-
   get maxIndex() {
-    return this.varCount - 1;
+    return this.indexedVars.length - 1;
   }
 
   // (TODO:reflect) this should be an instance variable of class objects
@@ -134,68 +131,41 @@ export class VirtualObject {
   ) {
     if (Array.isArray(literalValue)) {
       for (const value of literalValue) {
-        this.vars.push(vm.asLiteral(value));
+        this.indexedVars.push(vm.asLiteral(value));
       }
     } else {
       this._primitiveValue = literalValue;
     }
   }
 
-  checkVarId(id: number) {
-    invariant(
-      id >= 0 && id < this.namedVarCount,
-      RangeError,
-      id,
-      0,
-      this.namedVarCount - 1,
-      `an index into my (${this.classKey}) variables`,
-    );
-  }
-
-  setVar(id: number, value: VirtualObject, checkId = true) {
-    checkId && this.checkVarId(id);
-    this.vars[id] = value;
-  }
-
   writeIndexedVar(index: number, value: VirtualObject) {
-    this.setVar(index + this.namedVarCount, value, false);
-  }
-
-  readVar(id: number) {
-    this.checkVarId(id);
-    return this.vars[id] ?? this.vm.vNil;
+    this.indexedVars[index] = value;
   }
 
   readIndexedVar<PrimitiveType = AnyLiteralJsValue>(
     index: number,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
-    const result = this.vars[index + this.namedVarCount] ?? this.vm.vNil;
+    const result = this.indexedVars[index] ?? this.vm.vNil;
     expectedType.check(result, `index ${index}`);
     return result;
-  }
-
-  getVarId(name: string): number {
-    return this.vClass.ivars.indexOf(name);
   }
 
   readNamedVar<PrimitiveType = AnyLiteralJsValue>(
     name: string,
     expectedType: RuntimeType<PrimitiveType> = runtimeTypeAnyJsLiteral,
   ) {
-    const varId = this.getVarId(name);
-    invariant(varId >= 0, BindingError, this.classKey, name);
-    const value = this.readVar(varId);
+    const value = this.namedVars[name] ?? this.vm.vNil;
     expectedType.check(value, name);
     return value;
   }
 
   writeNamedVar(name: string, value: VirtualObject) {
-    this.setVar(this.getVarId(name), value);
+    this.namedVars[name] = value;
   }
 
   hasVarWithName(name: string) {
-    return this.getVarId(name) >= 0;
+    return name in this.namedVars;
   }
 
   /** (TODO:reflect) implement in interpreted language */
@@ -215,19 +185,19 @@ export class VirtualObject {
   }
 
   get stackTop(): VirtualObject | undefined {
-    return this.vars[this.maxIndex];
+    return this.indexedVars[this.stackDepth - 1];
   }
 
   get stackDepth() {
-    return this.varCount;
+    return this.indexedVars.length;
   }
 
   stackPop() {
-    return this.vars.pop();
+    return this.indexedVars.pop();
   }
 
   stackPush(object: VirtualObject) {
-    return this.vars.push(object);
+    return this.indexedVars.push(object);
   }
 }
 

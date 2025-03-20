@@ -79,12 +79,10 @@ const instructionTests: Record<
         "argsAndTemps",
         runtimeTypeNotNil,
       );
-      const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
       const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
 
       literals.writeIndexedVar(3, vm.asLiteral("Object"));
       argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
-      receiver.setVar(2, vm.asLiteral(true));
       const value = loadContextValue(contextValue, index, vm);
 
       inst.do(vm);
@@ -144,7 +142,7 @@ const instructionTests: Record<
 
       inst.do(vm);
 
-      expect(evalStack.stackTop).toBe(receiver.readNamedVar(varName));
+      expect(evalStack.stackTop!.id).toBe(receiver.readNamedVar(varName).id);
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -176,12 +174,51 @@ const instructionTests: Record<
       runtimeTypeNotNil,
     );
     argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
-    const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
-    receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       inst.do(vm);
       expect(evalStack.stackTop).toBe(loadContextValue(target, offset, vm));
+    });
+
+    test("Fail if the contextStack is empty", () => {
+      const vmt = new VirtualMachine();
+      expect(() => inst.do(vmt)).toThrow();
+    });
+
+    test("Fail if the evalStack is empty", () => {
+      vm.invokeAsMethod(vm.asLiteral(undefined), emptyClosure);
+      expect(() => inst.do(vm)).toThrow();
+    });
+
+    test("Fail if the closure or context is lacking the specified variable", () => {
+      const context = vm.invokeAsMethod(vm.asLiteral(undefined), emptyClosure);
+
+      const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
+      evalStack.stackPush(vm.asLiteral("value"));
+      expect(() => inst.do(vm)).toThrow();
+    });
+  },
+  storeInReceiverVariable: (inst) => {
+    const [varName] = inst.args;
+    const vm = new VirtualMachine();
+    const closure = vm.createClosure({
+      tempCount: 4,
+      literals: [0, 0, 0, 0],
+    });
+    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
+    const vTestObject = vm.createObject("TestObject");
+    const context = vm.invokeAsMethod(vTestObject, closure);
+    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
+
+    const emptyClosure = vm.createClosure();
+
+    evalStack.stackPush(vm.asLiteral("value"));
+
+    const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
+
+    test("Do it successfully", () => {
+      inst.do(vm);
+      expect(receiver.readNamedVar(varName)).toBe(evalStack.stackPop());
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -225,7 +262,7 @@ const instructionTests: Record<
       runtimeTypeNotNil,
     );
     argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
-    receiver.setVar(2, vm.asLiteral(true));
+    // receiver.setVar(2, vm.asLiteral(true));
 
     test("Do it successfully", () => {
       inst.do(vm);
@@ -571,16 +608,15 @@ function testInstruction<I extends Instruction<any>>(inst: I) {
 describe("Instructions", () => {
   testInstruction(instruction.pushSpecialValue(SpecialPushValue.NegativeOne));
   testInstruction(instruction.returnSpecialValue(SpecialReturnValue.Self));
-  testInstruction(instruction.push(ContextValue.ReceiverVar, 2));
   testInstruction(instruction.push(ContextValue.TempVar, 3));
   testInstruction(instruction.push(ContextValue.LiteralConst, 3));
   testInstruction(instruction.push(ContextValue.LiteralVar, 3));
   testInstruction(instruction.pushImmediate("foo"));
   testInstruction(instruction.pushReceiverVariable("baz"));
-  testInstruction(instruction.store(ContextVariable.ReceiverVar, 2));
   testInstruction(instruction.store(ContextVariable.LiteralVar, 3));
   testInstruction(instruction.store(ContextVariable.TempVar, 3));
-  testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
+  testInstruction(instruction.storeInReceiverVariable("baz")),
+    testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
   // (TODO:testing) test a non-primitive method
   testInstruction(instruction.sendSelector("+", 1));
   testInstruction(instruction.sendSelector("-", 1));

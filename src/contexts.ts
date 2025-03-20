@@ -39,14 +39,12 @@ export class GlobalContext {
  */
 
 export enum ContextValue {
-  ReceiverVar,
   TempVar,
   LiteralVar,
   LiteralConst,
 }
 
 export enum ContextVariable {
-  ReceiverVar,
   TempVar,
   LiteralVar,
 }
@@ -59,10 +57,6 @@ export function loadContextValue(
   const context = vm.contextStack.peek();
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (value) {
-    case ContextVariable.ReceiverVar:
-      return getVarByOffsetFromContextReceiver(context, offset);
-    case ContextValue.ReceiverVar:
-      return getVarByOffsetFromContextReceiver(context, offset);
     case ContextVariable.TempVar:
     case ContextValue.TempVar:
       validateTempVarOffset(offset, context);
@@ -78,20 +72,23 @@ export function loadContextValue(
   }
 }
 
-export function getVarByOffsetFromContextReceiver(
-  context: VirtualObject,
-  offset: number,
-) {
-  return context.readNamedVar("receiver", runtimeTypeNotNil).readVar(offset);
+function getContextReceiver(context: VirtualObject) {
+  return context.readNamedVar("receiver", runtimeTypeNotNil);
 }
 
 export function getVarFromContextReceiver(
   context: VirtualObject,
   varName: string,
 ) {
-  return context
-    .readNamedVar("receiver", runtimeTypeNotNil)
-    .readNamedVar(varName);
+  return getContextReceiver(context).readNamedVar(varName);
+}
+
+export function setVarInContextReceiver(
+  context: VirtualObject,
+  varName: string,
+  value: VirtualObject,
+) {
+  getContextReceiver(context).writeNamedVar(varName, value);
 }
 
 function readLiteral<PrimitiveType>(
@@ -145,12 +142,6 @@ export function storeContextValue(
   const context = vm.contextStack.peek();
   invariant(context !== undefined, StackUnderflowError, "context");
   switch (target) {
-    case ContextVariable.ReceiverVar: {
-      context
-        .readNamedVar("receiver", runtimeTypeNotNil)
-        .setVar(offset, vObject);
-      return;
-    }
     case ContextVariable.TempVar: {
       validateTempVarOffset(offset, context);
       context

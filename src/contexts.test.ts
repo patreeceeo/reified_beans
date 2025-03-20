@@ -22,12 +22,7 @@ describe("ContextValue", () => {
     vm.contextStack.push(context);
     literals.writeIndexedVar(3, vm.asLiteral("Object"));
     argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
-    receiver.setVar(2, vm.asLiteral(true));
 
-    test(ContextValue[ContextValue.ReceiverVar], () => {
-      const result = loadContextValue(ContextValue.ReceiverVar, 2, vm);
-      expect(result).toBe(receiver.readVar(2));
-    });
     test(ContextValue[ContextValue.TempVar], () => {
       const result = loadContextValue(ContextValue.TempVar, 3, vm);
       expect(result).toBe(argsAndTemps.readIndexedVar(3));

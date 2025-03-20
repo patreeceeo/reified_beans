@@ -3,6 +3,7 @@ import {
   ContextVariable,
   getVarFromContextReceiver,
   loadContextValue,
+  setVarInContextReceiver,
   storeContextValue,
 } from "./contexts";
 import { invariant, StackUnderflowError } from "./errors";
@@ -82,7 +83,8 @@ class PushReceiverVariableInstruction extends Instruction<[string]> {
     const [varName] = this.args;
     const context = vm.contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    return getVarFromContextReceiver(context, varName);
+    const object = getVarFromContextReceiver(context, varName);
+    vm.evalStack.stackPush(object);
   }
 }
 
@@ -97,6 +99,22 @@ class StoreInstruction extends Instruction<[ContextVariable, number]> {
     const object = vm.evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     storeContextValue(source, offset, vm, object);
+  }
+}
+
+class StoreInReceiverVariableInstruction extends Instruction<[string]> {
+  type = "storeInReceiverVariable" as const;
+  explain() {
+    const [varName] = this.args;
+    return `Store to receiver variable ${varName}`;
+  }
+  do(vm: VirtualMachine) {
+    const [varName] = this.args;
+    const context = vm.contextStack.peek();
+    invariant(context, StackUnderflowError, "context");
+    const object = vm.evalStack.stackTop;
+    invariant(object, StackUnderflowError, "evaluation");
+    setVarInContextReceiver(context, varName, object);
   }
 }
 
@@ -283,6 +301,16 @@ export const instruction = {
     offset: number,
   ): Instruction<[ContextVariable, number]> {
     return new StoreInstruction([source, offset]);
+  },
+
+  /**
+   * Store the object on the top of the stack in the indicated variable in the receiver
+   * @param varName The name of the variable in the receiver
+   *
+   * TODO add andPop param
+   */
+  storeInReceiverVariable(varName: string) {
+    return new StoreInReceiverVariableInstruction([varName]);
   },
 
   /**
