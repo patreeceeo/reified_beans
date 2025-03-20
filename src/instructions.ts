@@ -88,15 +88,15 @@ class PushReceiverVariableInstruction extends Instruction<[string]> {
   }
 }
 
-class StoreInstruction extends Instruction<[ContextVariable, number]> {
+class StoreInstruction extends Instruction<[ContextVariable, number, boolean]> {
   type = "store" as const;
   explain() {
-    const [source, offset] = this.args;
-    return `Store to ${ContextValue[source]} at offset ${offset}`;
+    const [source, offset, andPop] = this.args;
+    return `${andPop ? "Pop and store" : "Store"} in ${ContextVariable[source]} at offset ${offset}`;
   }
   do(vm: VirtualMachine) {
-    const [source, offset] = this.args;
-    const object = vm.evalStack.stackTop;
+    const [source, offset, andPop] = this.args;
+    const object = andPop ? vm.evalStack.stackPop() : vm.evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     storeContextValue(source, offset, vm, object);
   }
@@ -118,20 +118,6 @@ class StoreInReceiverVariableInstruction extends Instruction<
     const object = andPop ? evalStack.stackPop() : evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     setVarInContextReceiver(context, varName, object);
-  }
-}
-
-class PopAndStoreInstruction extends Instruction<[ContextVariable, number]> {
-  type = "popAndStore" as const;
-  explain() {
-    const [source, offset] = this.args;
-    return `Pop and store to ${ContextValue[source]} at offset ${offset}`;
-  }
-  do(vm: VirtualMachine) {
-    const [source, offset] = this.args;
-    const object = vm.evalStack.stackPop();
-    invariant(object, StackUnderflowError, "evaluation");
-    storeContextValue(source, offset, vm, object);
   }
 }
 
@@ -299,11 +285,8 @@ export const instruction = {
    * @param offset The offset from the target
    * @see ContextVariable
    */
-  store(
-    source: ContextVariable,
-    offset: number,
-  ): Instruction<[ContextVariable, number]> {
-    return new StoreInstruction([source, offset]);
+  store(source: ContextVariable, offset: number, andPop = false) {
+    return new StoreInstruction([source, offset, andPop]);
   },
 
   /**
@@ -312,19 +295,6 @@ export const instruction = {
    */
   storeInReceiverVariable(varName: string, andPop = false) {
     return new StoreInReceiverVariableInstruction([varName, andPop]);
-  },
-
-  /**
-   * Pop the object from the top of the stack and store in the indicated location
-   * @param target The target of the PopAndStore instruction
-   * @param offset The offset from the target
-   * @see ContextVariable
-   */
-  popAndStore(
-    source: ContextVariable,
-    offset: number,
-  ): Instruction<[ContextVariable, number]> {
-    return new PopAndStoreInstruction([source, offset]);
   },
 
   /**

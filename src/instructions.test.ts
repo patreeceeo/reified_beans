@@ -151,7 +151,7 @@ const instructionTests: Record<
     });
   },
   store: (inst) => {
-    const [target, offset] = inst.args;
+    const [target, offset, andPop] = inst.args;
     const vm = new VirtualMachine();
     const closure = vm.createClosure({
       tempCount: 4,
@@ -165,8 +165,9 @@ const instructionTests: Record<
     const emptyClosure = vm.createClosure();
 
     const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
+    const stackTop = vm.asLiteral("value");
 
-    evalStack.stackPush(vm.asLiteral("value"));
+    evalStack.stackPush(stackTop);
     literals.writeIndexedVar(3, vm.asLiteral("Object"));
 
     const argsAndTemps = context.readNamedVar(
@@ -177,7 +178,10 @@ const instructionTests: Record<
 
     test("Do it successfully", () => {
       inst.do(vm);
-      expect(evalStack.stackTop).toBe(loadContextValue(target, offset, vm));
+      expect(stackTop).toBe(loadContextValue(target, offset, vm));
+      if (andPop) {
+        expect(evalStack.stackDepth).toBe(0);
+      }
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -619,11 +623,12 @@ describe("Instructions", () => {
   testInstruction(instruction.pushReceiverVariable("baz"));
   testInstruction(instruction.store(ContextVariable.LiteralVar, 3));
   testInstruction(instruction.store(ContextVariable.TempVar, 3));
+  testInstruction(instruction.store(ContextVariable.TempVar, 3, true));
   testInstruction(instruction.storeInReceiverVariable("baz")),
     testInstruction(instruction.storeInReceiverVariable("baz", true)),
-    testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
-  // (TODO:testing) test a non-primitive method
-  testInstruction(instruction.sendSelector("+", 1));
+    // testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
+    // (TODO:testing) test a non-primitive method
+    testInstruction(instruction.sendSelector("+", 1));
   testInstruction(instruction.sendSelector("-", 1));
   testInstruction(instruction.pop());
   testInstruction(instruction.duplicate());
