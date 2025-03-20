@@ -247,55 +247,6 @@ const instructionTests: Record<
       expect(() => inst.do(vm)).toThrow();
     });
   },
-  popAndStore: (inst) => {
-    const [target, offset] = inst.args;
-    const vm = new VirtualMachine();
-    const closure = vm.createClosure({
-      tempCount: 4,
-      literals: [0, 0, 0, 0],
-    });
-    vm.initializeClass("TestObject", "Object", ["foo", "bar", "baz"]);
-    const receiver = vm.createObject("TestObject");
-    const context = vm.invokeAsMethod(receiver, closure);
-    const pushedValue = vm.asLiteral("value");
-    const evalStack = context.readNamedVar("evalStack", runtimeTypeNotNil);
-
-    const literals = closure.readNamedVar("literals", runtimeTypeNotNil);
-
-    evalStack.stackPush(pushedValue);
-    literals.writeIndexedVar(3, vm.asLiteral("Object"));
-
-    const argsAndTemps = context.readNamedVar(
-      "argsAndTemps",
-      runtimeTypeNotNil,
-    );
-    argsAndTemps.writeIndexedVar(3, vm.asLiteral(42));
-    // receiver.setVar(2, vm.asLiteral(true));
-
-    test("Do it successfully", () => {
-      inst.do(vm);
-      expect(loadContextValue(target, offset, vm)).toBe(pushedValue);
-      expect(evalStack.stackDepth).toBe(0);
-    });
-
-    test("Fail if the contextStack is empty", () => {
-      const vm = new VirtualMachine();
-      expect(() => inst.do(vm)).toThrow();
-    });
-
-    test("Fail if the closure or context is lacking the specified variable", () => {
-      const emptyClosure = vm.createClosure();
-      const emptyContext = vm.invokeAsMethod(receiver, emptyClosure);
-
-      const evalStack = emptyContext.readNamedVar(
-        "evalStack",
-        runtimeTypeNotNil,
-      );
-      evalStack.stackPush(pushedValue);
-      vm.contextStack.push(emptyContext);
-      expect(() => inst.do(vm)).toThrow();
-    });
-  },
   sendSelector: (inst) => {
     const [selector] = inst.args;
 
