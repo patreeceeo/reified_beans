@@ -199,7 +199,7 @@ const instructionTests: Record<
     });
   },
   storeInReceiverVariable: (inst) => {
-    const [varName] = inst.args;
+    const [varName, andPop] = inst.args;
     const vm = new VirtualMachine();
     const closure = vm.createClosure({
       tempCount: 4,
@@ -212,13 +212,17 @@ const instructionTests: Record<
 
     const emptyClosure = vm.createClosure();
 
-    evalStack.stackPush(vm.asLiteral("value"));
+    const stackTop = vm.asLiteral("value");
+    evalStack.stackPush(stackTop);
 
     const receiver = context.readNamedVar("receiver", runtimeTypeNotNil);
 
     test("Do it successfully", () => {
       inst.do(vm);
-      expect(receiver.readNamedVar(varName)).toBe(evalStack.stackPop());
+      expect(receiver.readNamedVar(varName)).toBe(stackTop);
+      if (andPop) {
+        expect(evalStack.stackDepth).toBe(0);
+      }
     });
 
     test("Fail if the contextStack is empty", () => {
@@ -616,6 +620,7 @@ describe("Instructions", () => {
   testInstruction(instruction.store(ContextVariable.LiteralVar, 3));
   testInstruction(instruction.store(ContextVariable.TempVar, 3));
   testInstruction(instruction.storeInReceiverVariable("baz")),
+    testInstruction(instruction.storeInReceiverVariable("baz", true)),
     testInstruction(instruction.popAndStore(ContextVariable.LiteralVar, 3));
   // (TODO:testing) test a non-primitive method
   testInstruction(instruction.sendSelector("+", 1));

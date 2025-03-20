@@ -102,17 +102,20 @@ class StoreInstruction extends Instruction<[ContextVariable, number]> {
   }
 }
 
-class StoreInReceiverVariableInstruction extends Instruction<[string]> {
+class StoreInReceiverVariableInstruction extends Instruction<
+  [string, boolean]
+> {
   type = "storeInReceiverVariable" as const;
   explain() {
-    const [varName] = this.args;
-    return `Store to receiver variable ${varName}`;
+    const [varName, andPop] = this.args;
+    return `${andPop ? "Pop and store" : "Store"} in receiver variable ${varName}`;
   }
   do(vm: VirtualMachine) {
-    const [varName] = this.args;
-    const context = vm.contextStack.peek();
+    const { contextStack, evalStack } = vm;
+    const [varName, andPop] = this.args;
+    const context = contextStack.peek();
     invariant(context, StackUnderflowError, "context");
-    const object = vm.evalStack.stackTop;
+    const object = andPop ? evalStack.stackPop() : evalStack.stackTop;
     invariant(object, StackUnderflowError, "evaluation");
     setVarInContextReceiver(context, varName, object);
   }
@@ -309,8 +312,8 @@ export const instruction = {
    *
    * TODO add andPop param
    */
-  storeInReceiverVariable(varName: string) {
-    return new StoreInReceiverVariableInstruction([varName]);
+  storeInReceiverVariable(varName: string, andPop = false) {
+    return new StoreInReceiverVariableInstruction([varName, andPop]);
   },
 
   /**
