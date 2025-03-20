@@ -221,13 +221,14 @@ export class ClassCompiler {
   //   }
   // }
 
-  compileClosureBody(description: ClosureDescription): Instruction<any>[] {
-    const args = description.args ?? [];
-    const temps = description.temps ?? [];
-    const literals = new Map<AnyLiteralValue, number>();
-
+  compileClosureBody(
+    body: Expression[],
+    args: Identifier[],
+    temps: Identifier[],
+    literals: Map<AnyLiteralValue, number>,
+  ): Instruction<any>[] {
     const bodyInstructions =
-      description.body?.flatMap((expr) =>
+      body.flatMap((expr) =>
         this.compileExpression(expr, args, temps, literals),
       ) ?? [];
 
@@ -238,8 +239,12 @@ export class ClassCompiler {
     const closure = new VirtualObject(this.vm, "Closure");
 
     const closureId = guid();
-    this.vm.instructionsByClosureId[closureId] =
-      this.compileClosureBody(description);
+    this.vm.instructionsByClosureId[closureId] = this.compileClosureBody(
+      description.body ?? [],
+      description.args ?? [],
+      description.temps ?? [],
+      new Map(),
+    );
     closure.writeNamedVar("closureId", this.vm.asLiteral(closureId));
 
     return closure;

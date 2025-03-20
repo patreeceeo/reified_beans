@@ -236,7 +236,12 @@ describe("compiler", () => {
       ).primitiveValue;
 
       expect(vm.instructionsByClosureId[closureId]).toEqual(
-        compiler.compileClosureBody(closureDescription),
+        compiler.compileClosureBody(
+          closureDescription.body ?? [],
+          [],
+          [],
+          new Map(),
+        ),
       );
     });
   });
