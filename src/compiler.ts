@@ -263,6 +263,7 @@ export class ClassCompiler {
     return closure;
   }
 
+  // TODO test
   computeInputLiterals(exprs: Expression[]): Map<AnyLiteralValue, number> {
     const literals = new Map<AnyLiteralValue, number>();
     for (const expr of exprs) {
@@ -274,6 +275,7 @@ export class ClassCompiler {
     return literals;
   }
 
+  // TODO test
   computeLiteralTable(exprs: Expression[]): VirtualObject {
     const literals = new VirtualObject(this.vm, "Array");
     for (const expr of exprs) {

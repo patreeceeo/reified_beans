@@ -230,6 +230,7 @@ export class VirtualObject {
     return true;
   }
 
+  // TODO test
   shapeEquals(other: VirtualObject) {
     if (!this.looseEquals(other)) {
       return false;
