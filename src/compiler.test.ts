@@ -190,7 +190,7 @@ const compileExpressionTests: Dict<CompileExpressionTestCase> = {
   },
 };
 
-describe("compiler", () => {
+describe("ClassCompiler", () => {
   describe("compileExpression", () => {
     for (const [name, testCase] of Object.entries(compileExpressionTests)) {
       test(name, () => {
@@ -254,6 +254,17 @@ describe("compiler", () => {
         const expected = compiler.computeLiteralTable(body);
         expect(actual.shapeEquals(expected)).toBe(true);
       });
+    });
+  });
+
+  describe("compile", () => {
+    const vm = new VirtualMachine();
+    const compiler = new ClassCompiler(classDescription, vm);
+    test("binds the resulting object in the global scope", () => {
+      const compiledClass = compiler.compile();
+      expect(vm.globalContext.at(classDescription.name).id).toBe(
+        compiledClass.id,
+      );
     });
   });
 });

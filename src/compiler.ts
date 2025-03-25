@@ -214,19 +214,6 @@ export class ClassCompiler {
     }
   }
 
-  // compile() {
-  //   const { description, vm } = this;
-  //   const superClass = vm.globalContext.at(superClassName);
-  //   const ivars = [...superClass.ivars, ...description.ivars];
-  //   const vClass = new VirtualObject(vm, "Class", ivars);
-  //   for (const [methodName, closureDescription] of Object.entries(
-  //     description.methods,
-  //   )) {
-  //     const closure = this.compileClosure(closureDescription);
-  //     vClass.methodDict[methodName] = closure;
-  //   }
-  // }
-
   compileClosureBody(
     body: Expression[],
     args: Identifier[],
@@ -286,5 +273,20 @@ export class ClassCompiler {
       }
     }
     return literals;
+  }
+
+  /**
+   * We could design the language such that classes are created with class expressions and assigned to a variable like
+   * any other value in the language. This would mean less special syntax to learn while allowing for the possiblity of
+   * supporting anonymous classes, nested classes, and other advanced features.
+   *
+   * However, for now we will keep the class definition syntax as it is. The compiler will create a class object
+   * and assign it to the class variable in the global context.
+   */
+  compile() {
+    const { vm, description } = this;
+    const vo = new VirtualObject(vm, "Class");
+    vm.globalContext.put(description.name, vo);
+    return vo;
   }
 }
