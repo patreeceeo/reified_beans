@@ -79,6 +79,8 @@ export class VirtualObject {
    * and all of its superclasses. This method stubs out a class object with the given superclass,
    * but does not set the class's superClass instance variable, because that's not possible until
    * the class Class is defined, so the superClass must be set later.
+   *
+   * @deprecated
    */
   static stubClassObject(
     vm: VirtualMachine,

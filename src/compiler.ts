@@ -11,6 +11,7 @@ import { instruction, type Instruction } from "./instructions";
 import { ContextValue } from "./contexts";
 import { BindingError, invariant, raise } from "./errors";
 import { guid } from "./guid";
+import { findArrayDuplicates } from "./array";
 
 const exampleProgramClosure: ClosureDescription = {
   args: [{ id: "block" }, { id: "list" }],
@@ -275,6 +276,29 @@ export class ClassCompiler {
     return literals;
   }
 
+  computeMergedInstanceVars(): string[] {
+    const { vm, description } = this;
+
+    const duplicatesInClass = findArrayDuplicates(description.ivars);
+    invariant(
+      duplicatesInClass.length === 0,
+      Error,
+      `Class ${description.name} declares ${duplicatesInClass.join(", ")} as instance variables more than once`,
+    );
+
+    const superClass = vm.globalContext.at(description.superClass);
+    const merged = [...superClass.ivars, ...description.ivars];
+
+    const duplicatesFromSuperclass = findArrayDuplicates(merged);
+    invariant(
+      duplicatesFromSuperclass.length === 0,
+      Error,
+      `Name collision: Class ${description.name} locally declares AND inherits ${duplicatesFromSuperclass.join(", ")} as instance variables`,
+    );
+
+    return merged;
+  }
+
   /**
    * We could design the language such that classes are created with class expressions and assigned to a variable like
    * any other value in the language. This would mean less special syntax to learn while allowing for the possiblity of
@@ -285,8 +309,12 @@ export class ClassCompiler {
    */
   compile() {
     const { vm, description } = this;
-    const vo = new VirtualObject(vm, "Class");
+
+    const vo = new VirtualObject(vm, "Class", this.computeMergedInstanceVars());
+
+    // Bind the class to its name
     vm.globalContext.put(description.name, vo);
+
     return vo;
   }
 }

@@ -13,10 +13,34 @@ import type { Dict } from "./generics";
 import type { AnyLiteralJsValue } from "./virtual_objects";
 import { runtimeTypeString } from "./runtime_type_checks";
 
+const superClassDescription: ClassDescription = {
+  name: "SuperClass",
+  superClass: "nil",
+  ivars: ["superIvar"],
+  methods: {},
+  classComment: "",
+};
+
 const classDescription: ClassDescription = {
   name: "ExampleClass",
-  superClass: "nil",
-  ivars: [],
+  superClass: "SuperClass",
+  ivars: ["exampleIvar"],
+  methods: {},
+  classComment: "",
+};
+
+const classDescriptionWithIVarsFromSuper: ClassDescription = {
+  name: "ExampleClass",
+  superClass: "SuperClass",
+  ivars: ["superIvar"],
+  methods: {},
+  classComment: "",
+};
+
+const classDescriptionWithDuplicateIVars: ClassDescription = {
+  name: "ExampleClass",
+  superClass: "SuperClass",
+  ivars: ["exampleIvar", "exampleIvar"],
   methods: {},
   classComment: "",
 };
@@ -259,12 +283,33 @@ describe("ClassCompiler", () => {
 
   describe("compile", () => {
     const vm = new VirtualMachine();
+    new ClassCompiler(superClassDescription, vm).compile();
     const compiler = new ClassCompiler(classDescription, vm);
+
     test("binds the resulting object in the global scope", () => {
       const compiledClass = compiler.compile();
       expect(vm.globalContext.at(classDescription.name).id).toBe(
         compiledClass.id,
       );
+    });
+
+    test("inheriting instance variables from the superclass", () => {
+      classDescription.superClass = superClassDescription.name;
+
+      const subClass = compiler.compile();
+      expect(subClass.ivars).toEqual(["superIvar", "exampleIvar"]);
+    });
+
+    test("instance variable name collision with self", () => {
+      expect(() =>
+        new ClassCompiler(classDescriptionWithDuplicateIVars, vm).compile(),
+      ).toThrow();
+    });
+
+    test("instance variable name collision with super", () => {
+      expect(() =>
+        new ClassCompiler(classDescriptionWithIVarsFromSuper, vm).compile(),
+      ).toThrow();
     });
   });
 });
