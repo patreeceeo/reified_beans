@@ -315,6 +315,14 @@ export class ClassCompiler {
     // Bind the class to its name
     vm.globalContext.put(description.name, vo);
 
+    // Inherit and compile methods
+    for (const [selector, closureDescription] of Object.entries(
+      description.methods,
+    )) {
+      const closure = this.compileClosure(closureDescription);
+      vo.methodDict[selector] = closure;
+    }
+
     return vo;
   }
 }

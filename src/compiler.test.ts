@@ -25,7 +25,16 @@ const classDescription: ClassDescription = {
   name: "ExampleClass",
   superClass: "SuperClass",
   ivars: ["exampleIvar"],
-  methods: {},
+  methods: {
+    exampleMethod: {
+      body: [
+        {
+          type: "js_primitive",
+          value: 43,
+        },
+      ],
+    },
+  },
   classComment: "",
 };
 
@@ -310,6 +319,15 @@ describe("ClassCompiler", () => {
       expect(() =>
         new ClassCompiler(classDescriptionWithIVarsFromSuper, vm).compile(),
       ).toThrow();
+    });
+
+    test("instance methods are compiled", () => {
+      const compiledClass = compiler.compile();
+      expect(
+        compiledClass.methodDict.exampleMethod.shapeEquals(
+          compiler.compileClosure(classDescription.methods.exampleMethod),
+        ),
+      ).toBe(true);
     });
   });
 });
